@@ -8,6 +8,8 @@ import { getJobCatalogSnapshot } from "@/lib/job-data";
 import { getReviewQueueSnapshot } from "@/lib/review-data";
 import { getSettingsSnapshot } from "@/lib/settings-data";
 
+export const dynamic = "force-dynamic";
+
 export default async function Page() {
   const [
     health,

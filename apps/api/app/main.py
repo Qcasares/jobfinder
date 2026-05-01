@@ -1,7 +1,9 @@
+from collections.abc import Awaitable, Callable
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.config import Settings, get_settings
@@ -56,14 +58,57 @@ from app.services.candidate import CandidateSafetyError, CandidateWorkspaceServi
 from app.services.dashboard import DashboardService
 from app.services.domain import DomainNormalizationError
 from app.services.jobs import JobCatalogService
+from app.services.production_guard import WRITE_API_DISABLED_DETAIL
 from app.services.review_queue import ReviewQueueService
 from app.services.runtime_settings import RuntimeSettingsService
 from app.services.source_registry import SourceRegistryService
+
+WRITE_GATED_ROUTES = {
+    "/approvals/requests",
+    "/candidate/evidence",
+    "/candidate/profile",
+    "/candidate/search-criteria",
+    "/source-policies/check",
+    "/source-policies/seed-known",
+    "/sources",
+}
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     resolved_settings = settings or get_settings()
     app = FastAPI(title="Jobfinder API", version="0.1.0")
+
+    @app.middleware("http")
+    async def security_headers(
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]],
+    ) -> Response:
+        response = await call_next(request)
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("Referrer-Policy", "no-referrer")
+        response.headers.setdefault(
+            "Permissions-Policy",
+            "camera=(), microphone=(), geolocation=()",
+        )
+        return response
+
+    @app.middleware("http")
+    async def production_write_guard(
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]],
+    ) -> Response:
+        if (
+            request.method in {"POST", "PUT", "PATCH", "DELETE"}
+            and request.url.path in WRITE_GATED_ROUTES
+            and not resolved_settings.production_writes_allowed
+        ):
+            return JSONResponse(
+                status_code=403,
+                content={"detail": WRITE_API_DISABLED_DETAIL},
+            )
+        response = await call_next(request)
+        return response
+
     if resolved_settings.cors_allowed_origins:
         app.add_middleware(
             CORSMiddleware,

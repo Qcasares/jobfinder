@@ -39,6 +39,15 @@ class RuntimeSettingsService:
                     ),
                 ),
                 RuntimeCapability(
+                    key="write_api",
+                    label="Write API",
+                    enabled=self._settings.production_writes_allowed,
+                    detail=(
+                        "Production write endpoints require explicit opt-in until "
+                        "authentication and operator controls are configured."
+                    ),
+                ),
+                RuntimeCapability(
                     key="live_crawling",
                     label="Live crawling",
                     enabled=False,

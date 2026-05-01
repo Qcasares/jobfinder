@@ -31,6 +31,7 @@ def test_runtime_settings_expose_safe_posture_without_secret_values() -> None:
         "source_policy_gate",
         "audit_hash_chain",
         "single_user_local_mode",
+        "write_api",
     }
     assert {capability.key for capability in runtime.capabilities if not capability.enabled} >= {
         "live_crawling",

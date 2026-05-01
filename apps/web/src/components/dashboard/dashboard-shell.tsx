@@ -4,20 +4,25 @@ import { type FormEvent, useState } from "react";
 import {
   Activity,
   Ban,
+  BookOpen,
   BriefcaseBusiness,
   CheckCircle2,
   ClipboardCheck,
   DatabaseZap,
   FileUser,
   Gauge,
+  HelpCircle,
+  Info,
   ListChecks,
   LockKeyhole,
   RefreshCcw,
+  Search,
+  ServerCog,
   ScrollText,
-  Settings,
   ShieldCheck,
   SlidersHorizontal,
-  TriangleAlert
+  TriangleAlert,
+  X
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,7 +47,6 @@ import {
   getPipelineTotal,
   getSourcePolicySummary,
   sourcePolicyActions,
-  type AuditEvent,
   type ReviewQueueItem as ReviewQueueBucket,
   type SourcePolicy,
   type SourcePolicyAction,
@@ -53,25 +57,182 @@ import type { ReviewJobItem, ReviewQueueSnapshot } from "@/lib/review-data";
 import type { RuntimeCapability, SettingsSnapshot } from "@/lib/settings-data";
 
 type DashboardView =
-  | "dashboard"
-  | "candidate"
-  | "sources"
+  | "job-overview"
+  | "profile"
   | "jobs"
-  | "review"
   | "applications"
-  | "audit"
-  | "settings";
+  | "reviews-needed"
+  | "admin-sources"
+  | "admin-approvals"
+  | "admin-audit"
+  | "admin-system";
 
-const navItems = [
-  { label: "Dashboard", icon: Gauge, view: "dashboard" },
-  { label: "Candidate", icon: FileUser, view: "candidate" },
-  { label: "Sources", icon: DatabaseZap, view: "sources" },
-  { label: "Jobs", icon: BriefcaseBusiness, view: "jobs" },
-  { label: "Review", icon: ClipboardCheck, view: "review" },
-  { label: "Applications", icon: ListChecks, view: "applications" },
-  { label: "Audit", icon: ScrollText, view: "audit" },
-  { label: "Settings", icon: Settings, view: "settings" }
-] satisfies Array<{ label: string; icon: typeof Gauge; view?: DashboardView }>;
+type NavigationArea = "job-search" | "administration";
+
+const navigationAreas = [
+  {
+    label: "Job Search",
+    value: "job-search",
+    icon: Search,
+    description: "Review synthetic matches, profile evidence, and application progress."
+  },
+  {
+    label: "Administration",
+    value: "administration",
+    icon: ShieldCheck,
+    description: "Review source policy, approvals, audit integrity, and runtime gates."
+  }
+] satisfies Array<{
+  label: string;
+  value: NavigationArea;
+  icon: typeof Gauge;
+  description: string;
+}>;
+
+const navItems = {
+  "job-search": [
+    { label: "Overview", icon: Gauge, view: "job-overview" },
+    { label: "Profile", icon: FileUser, view: "profile" },
+    { label: "Jobs", icon: BriefcaseBusiness, view: "jobs" },
+    { label: "Applications", icon: ListChecks, view: "applications" },
+    { label: "Reviews Needed", icon: ClipboardCheck, view: "reviews-needed" }
+  ],
+  administration: [
+    { label: "Sources", icon: DatabaseZap, view: "admin-sources" },
+    { label: "Approvals", icon: ClipboardCheck, view: "admin-approvals" },
+    { label: "Audit Log", icon: ScrollText, view: "admin-audit" },
+    { label: "System Status", icon: ServerCog, view: "admin-system" }
+  ]
+} satisfies Record<
+  NavigationArea,
+  Array<{ label: string; icon: typeof Gauge; view: DashboardView }>
+>;
+
+type HelpContent = {
+  shows: string;
+  actions: string[];
+  guardrails: string[];
+};
+
+const helpContent = {
+  "job-overview": {
+    shows: "A user-facing summary of job matches, reviews, approvals, and application progress.",
+    actions: [
+      "Start with reviews that need a human check.",
+      "Open Jobs to inspect matched roles.",
+      "Open Applications to see tracked application status."
+    ],
+    guardrails: [
+      "Safe local mode is active.",
+      "Only synthetic job and profile data should be used.",
+      "No crawling, autofill, or submission action is available."
+    ]
+  },
+  profile: {
+    shows: "The profile, evidence, and job preferences used for local matching examples.",
+    actions: [
+      "Check that profile evidence is complete enough for review.",
+      "Use job preferences to understand the current matching criteria.",
+      "Keep real CV, contact, and private candidate data out of this workspace."
+    ],
+    guardrails: [
+      "Synthetic profile data only.",
+      "Candidate evidence is audited when changed.",
+      "Claims must map back to approved evidence before later phases can use them."
+    ]
+  },
+  jobs: {
+    shows: "Fixture-backed job examples with source, location, pay, skills, and review status.",
+    actions: [
+      "Scan ready jobs first.",
+      "Use review status to identify jobs that need human checks.",
+      "Treat fixture names as diagnostics, not end-user content."
+    ],
+    guardrails: [
+      "Jobs are synthetic examples.",
+      "Extraction confidence does not authorize automation.",
+      "Submission remains disabled."
+    ]
+  },
+  applications: {
+    shows: "Read-only application tracker records and safety flags.",
+    actions: [
+      "Check whether an application is not started, in review, approved, or submitted.",
+      "Use safety flags to confirm no autofill or submission has happened.",
+      "Review linked approval records in Administration if needed."
+    ],
+    guardrails: [
+      "No application creation endpoint is exposed.",
+      "No autofill, browser handoff, or submit operation is available.",
+      "External side effects should remain zero in this phase."
+    ]
+  },
+  "reviews-needed": {
+    shows: "Jobs and workflow items blocked by policy, confidence, or evidence issues.",
+    actions: [
+      "Review the reason before moving a job forward.",
+      "Prioritize missing or uncertain data.",
+      "Use approval requests for operator decisions."
+    ],
+    guardrails: [
+      "Review is a stop gate, not a bypass.",
+      "Policy and evidence issues must be resolved before later automation.",
+      "CAPTCHA, access controls, and prohibited platforms stay blocked."
+    ]
+  },
+  "admin-sources": {
+    shows: "Source registry posture and action-scoped policy checks.",
+    actions: [
+      "Check whether a source/action pair is allowed, denied, or requires review.",
+      "Confirm unknown sources deny all actions until reviewed.",
+      "Keep source evidence current before allowing any downstream workflow."
+    ],
+    guardrails: [
+      "Allowed discovery does not imply extraction, drafting, autofill, or submission.",
+      "Expired evidence requires manual review.",
+      "LinkedIn and Indeed examples are blocked by default."
+    ]
+  },
+  "admin-approvals": {
+    shows: "Manual approval requests and gated decisions.",
+    actions: [
+      "Review pending approval requests.",
+      "Inspect why a request exists before approving or requesting changes.",
+      "Use this area for operator review, not normal job browsing."
+    ],
+    guardrails: [
+      "Approvals do not submit applications.",
+      "Autofill and submit flags must remain false in this phase.",
+      "Approval decisions emit audit events."
+    ]
+  },
+  "admin-audit": {
+    shows: "Hash-chained audit events for material decisions.",
+    actions: [
+      "Check event type, actor, correlation, and payload summary.",
+      "Use the integrity status to spot direct data tampering.",
+      "Keep raw private pages, cookies, tokens, and real candidate data out of audit payloads."
+    ],
+    guardrails: [
+      "Audit events are append-only through the service layer.",
+      "The chain must stay valid before trusting downstream workflow history.",
+      "Payloads should be metadata and references, not secrets."
+    ]
+  },
+  "admin-system": {
+    shows: "Runtime health, capability gates, API status, and audit integrity.",
+    actions: [
+      "Confirm API health before investigating stale UI data.",
+      "Check capability gates before enabling future integrations.",
+      "Use system status for diagnostics, not everyday job-search work."
+    ],
+    guardrails: [
+      "External integrations remain disabled.",
+      "Secrets are not surfaced in the UI.",
+      "Runtime gates should stay explicit before new capabilities are added."
+    ]
+  }
+} satisfies Record<DashboardView, HelpContent>;
 
 type DashboardShellProps = {
   health: ApiHealthStatus;
@@ -94,17 +255,21 @@ export function DashboardShell({
   auditSnapshot,
   settingsSnapshot
 }: DashboardShellProps) {
-  const [activeView, setActiveView] = useState<DashboardView>("dashboard");
+  const [activeArea, setActiveArea] = useState<NavigationArea>("job-search");
+  const [activeView, setActiveView] = useState<DashboardView>("job-overview");
+  const [helpOpen, setHelpOpen] = useState(false);
   const policySummary = getSourcePolicySummary(dashboardData.sourcePolicies);
   const pipelineTotal = getPipelineTotal(dashboardData.pipeline);
   const reviewTotal = reviewSnapshot.summary.needsReview;
-  const isCandidateView = activeView === "candidate";
-  const isSourcesView = activeView === "sources";
+  const isProfileView = activeView === "profile";
+  const isSourcesView = activeView === "admin-sources";
   const isJobsView = activeView === "jobs";
-  const isReviewView = activeView === "review";
+  const isReviewView = activeView === "reviews-needed";
   const isApplicationsView = activeView === "applications";
-  const isAuditView = activeView === "audit";
-  const isSettingsView = activeView === "settings";
+  const isApprovalsView = activeView === "admin-approvals";
+  const isAuditView = activeView === "admin-audit";
+  const isSystemView = activeView === "admin-system";
+  const activeAreaMeta = navigationAreas.find((area) => area.value === activeArea);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -117,31 +282,67 @@ export function DashboardShell({
               </div>
               <div>
                 <p className="text-sm font-semibold">Jobfinder</p>
-                <p className="text-xs text-muted-foreground">Governed workflow</p>
+                <p className="text-xs text-muted-foreground">Job search workspace</p>
               </div>
             </div>
-            <nav aria-label="Primary navigation" className="grid gap-1">
-              {navItems.map((item) => {
+
+            <div className="grid gap-2" aria-label="Workspace area">
+              {navigationAreas.map((area) => {
+                const Icon = area.icon;
+                const isActive = area.value === activeArea;
+                const firstView = navItems[area.value][0]?.view;
+
+                return (
+                  <button
+                    key={area.value}
+                    type="button"
+                    aria-pressed={isActive}
+                    onClick={() => {
+                      setActiveArea(area.value);
+                      setActiveView(firstView);
+                    }}
+                    className={cn(
+                      "flex min-h-12 w-full items-start gap-3 rounded-md border px-3 py-2 text-left",
+                      isActive
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-white text-foreground hover:bg-muted/70"
+                    )}
+                  >
+                    <Icon className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold">{area.label}</span>
+                      <span
+                        className={cn(
+                          "mt-0.5 block text-xs leading-4",
+                          isActive ? "text-primary-foreground/80" : "text-muted-foreground"
+                        )}
+                      >
+                        {area.description}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <nav aria-label={`${activeAreaMeta?.label ?? "Workspace"} navigation`} className="grid gap-1">
+              <p className="px-3 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                {activeAreaMeta?.label}
+              </p>
+              {navItems[activeArea].map((item) => {
                 const Icon = item.icon;
                 const isActive = item.view === activeView;
-                const isEnabled = Boolean(item.view);
 
                 return (
                   <button
                     key={item.label}
                     type="button"
                     aria-current={isActive ? "page" : undefined}
-                    disabled={!isEnabled}
-                    onClick={() => {
-                      if (item.view) {
-                        setActiveView(item.view);
-                      }
-                    }}
+                    onClick={() => setActiveView(item.view)}
                     className={cn(
                       "flex h-10 w-full items-center gap-3 rounded-md px-3 text-left text-sm font-medium text-muted-foreground",
                       isActive && "bg-muted text-foreground",
-                      isEnabled && "hover:bg-muted/70 hover:text-foreground",
-                      !isEnabled && "cursor-not-allowed opacity-55"
+                      "hover:bg-muted/70 hover:text-foreground"
                     )}
                   >
                     <Icon className="size-4" aria-hidden="true" />
@@ -151,9 +352,9 @@ export function DashboardShell({
               })}
             </nav>
             <div className="mt-auto hidden rounded-card border border-border bg-muted/60 p-3 text-xs text-muted-foreground lg:block">
-              <p className="font-medium text-foreground">Foundation mode</p>
+              <p className="font-medium text-foreground">Safe local mode</p>
               <p className="mt-1 leading-5">
-                Mock data only. No crawling, LLM calls, candidate files, or submissions.
+                No crawling, LLM calls, browser automation, or submissions.
               </p>
             </div>
           </div>
@@ -170,19 +371,55 @@ export function DashboardShell({
                   {viewTitle(activeView)}
                 </h1>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <Badge tone="info">{pipelineTotal} staged jobs</Badge>
-                <Badge tone={reviewTotal > 0 ? "warning" : "success"}>
-                  {reviewTotal} needs review
-                </Badge>
-                <Badge tone="success">{policySummary.allowed} approved sources</Badge>
+              <div className="relative flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  aria-expanded={helpOpen}
+                  aria-label={`Open help for ${viewTitle(activeView)}`}
+                  onClick={() => setHelpOpen((open) => !open)}
+                  className={cn(
+                    "inline-flex size-8 items-center justify-center rounded-md border border-border bg-white text-muted-foreground",
+                    "hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <HelpCircle className="size-4" aria-hidden="true" />
+                </button>
+                {helpOpen ? (
+                  <ContextHelpPopover
+                    areaLabel={activeAreaMeta?.label ?? "Workspace"}
+                    title={`${viewTitle(activeView)} help`}
+                    content={helpContent[activeView]}
+                    onClose={() => setHelpOpen(false)}
+                  />
+                ) : null}
+                {activeArea === "administration" ? (
+                  <>
+                    <Badge tone="success">{policySummary.allowed} approved sources</Badge>
+                    <Badge tone={approvalSnapshot.summary.pending > 0 ? "warning" : "success"}>
+                      {approvalSnapshot.summary.pending} pending approvals
+                    </Badge>
+                    <Badge tone={auditSnapshot.summary.chainValid ? "success" : "danger"}>
+                      audit chain {auditSnapshot.summary.chainValid ? "valid" : "invalid"}
+                    </Badge>
+                  </>
+                ) : (
+                  <>
+                    <Badge tone="info">{pipelineTotal} jobs tracked</Badge>
+                    <Badge tone={reviewTotal > 0 ? "warning" : "success"}>
+                      {reviewTotal} reviews needed
+                    </Badge>
+                    <Badge tone="info">
+                      {applicationSnapshot.summary.total} applications
+                    </Badge>
+                  </>
+                )}
               </div>
             </div>
           </header>
 
           {isSourcesView ? (
             <SourcesWorkspace policies={dashboardData.sourcePolicies} health={health} />
-          ) : isCandidateView ? (
+          ) : isProfileView ? (
             <CandidateWorkspace snapshot={candidateSnapshot} health={health} />
           ) : isJobsView ? (
             <JobsWorkspace snapshot={jobSnapshot} health={health} />
@@ -194,12 +431,22 @@ export function DashboardShell({
             />
           ) : isApplicationsView ? (
             <ApplicationsWorkspace snapshot={applicationSnapshot} health={health} />
+          ) : isApprovalsView ? (
+            <ApprovalsWorkspace
+              reviewSnapshot={reviewSnapshot}
+              approvalSnapshot={approvalSnapshot}
+              health={health}
+            />
           ) : isAuditView ? (
             <AuditWorkspace snapshot={auditSnapshot} health={health} />
-          ) : isSettingsView ? (
-            <SettingsWorkspace snapshot={settingsSnapshot} health={health} />
+          ) : isSystemView ? (
+            <SystemStatusWorkspace
+              settingsSnapshot={settingsSnapshot}
+              auditSnapshot={auditSnapshot}
+              health={health}
+            />
           ) : (
-            <DashboardOverview
+            <JobSearchOverview
               health={health}
               candidateSnapshot={candidateSnapshot}
               jobSnapshot={jobSnapshot}
@@ -216,7 +463,7 @@ export function DashboardShell({
   );
 }
 
-function DashboardOverview({
+function JobSearchOverview({
   health,
   candidateSnapshot,
   jobSnapshot,
@@ -238,22 +485,99 @@ function DashboardOverview({
   return (
     <div className="grid gap-4 p-4 sm:p-6 xl:grid-cols-[1.5fr_1fr]">
       <section className="grid gap-4">
+        <SafeLocalModeIntro />
+        <NextActionPanel
+          jobSnapshot={jobSnapshot}
+          reviewSnapshot={reviewSnapshot}
+          approvalSnapshot={approvalSnapshot}
+          applicationSnapshot={applicationSnapshot}
+        />
         <CandidateProfilePanel snapshot={candidateSnapshot} />
         <JobsPreviewPanel snapshot={jobSnapshot} />
-        <SourcePolicyPanel policies={dashboardData.sourcePolicies} />
         <PipelinePanel />
         <ApplicationTrackerPreview snapshot={applicationSnapshot} />
-        <RuntimePosturePreview snapshot={settingsSnapshot} />
-        <AuditFeed events={dashboardData.auditFeed} />
       </section>
       <section className="grid content-start gap-4">
         <HealthPanel health={health} />
         <ReviewQueuePanel items={reviewSnapshot.buckets} />
         <ApprovalSummaryPanel snapshot={approvalSnapshot} />
-        <AuditSummaryPanel snapshot={auditSnapshot} />
+        <SafeModePanel
+          source={settingsSnapshot.source}
+          chainValid={auditSnapshot.summary.chainValid}
+        />
         <GuardrailPanel />
       </section>
     </div>
+  );
+}
+
+function SafeLocalModeIntro() {
+  return (
+    <Card className="border-blue-200 bg-blue-50/70">
+      <CardContent className="flex items-start gap-3">
+        <ShieldCheck className="mt-0.5 size-5 shrink-0 text-blue-700" aria-hidden="true" />
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-blue-950">Safe local mode</p>
+          <p className="mt-1 text-sm leading-5 text-blue-900">
+            Review synthetic job matches, profile evidence, application status, and approval
+            gates. Jobfinder will not crawl sites, call an LLM, automate a browser, autofill forms,
+            or submit applications in this phase.
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function NextActionPanel({
+  jobSnapshot,
+  reviewSnapshot,
+  approvalSnapshot,
+  applicationSnapshot
+}: {
+  jobSnapshot: JobCatalogSnapshot;
+  reviewSnapshot: ReviewQueueSnapshot;
+  approvalSnapshot: ApprovalSnapshot;
+  applicationSnapshot: ApplicationSnapshot;
+}) {
+  const actions = [
+    {
+      label: "Review job matches",
+      detail: `${reviewSnapshot.summary.needsReview} jobs need a human check before they can move forward.`,
+      tone: reviewSnapshot.summary.needsReview > 0 ? "warning" : "success"
+    },
+    {
+      label: "Track applications",
+      detail: `${applicationSnapshot.summary.total} applications are in the local tracker.`,
+      tone: "info"
+    },
+    {
+      label: "Check approvals",
+      detail: `${approvalSnapshot.summary.pending} requests are waiting for review.`,
+      tone: approvalSnapshot.summary.pending > 0 ? "warning" : "success"
+    }
+  ] satisfies Array<{ label: string; detail: string; tone: "info" | "success" | "warning" }>;
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <CardTitle>Job Search Overview</CardTitle>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Start here to see matches, review work, and application progress.
+          </p>
+        </div>
+        <Badge tone="info">{jobSnapshot.summary.total} jobs</Badge>
+      </CardHeader>
+      <CardContent className="grid gap-3 md:grid-cols-3">
+        {actions.map((action) => (
+          <div key={action.label} className="rounded-md border border-border bg-muted/40 px-3 py-3">
+            <Badge tone={action.tone}>{action.label}</Badge>
+            <p className="mt-3 text-sm leading-5 text-muted-foreground">{action.detail}</p>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -283,8 +607,10 @@ function CandidateProfilePanel({ snapshot }: { snapshot: CandidateWorkspaceSnaps
   return (
     <Card>
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <CardTitle>Candidate Profile</CardTitle>
-        <Badge tone={snapshot.source === "api" ? "info" : "warning"}>{snapshot.source}</Badge>
+        <CardTitle>Profile</CardTitle>
+        <Badge tone={snapshot.source === "api" ? "info" : "warning"}>
+          {formatDataSource(snapshot.source)}
+        </Badge>
       </CardHeader>
       <CardContent className="grid gap-4">
         <div>
@@ -295,8 +621,8 @@ function CandidateProfilePanel({ snapshot }: { snapshot: CandidateWorkspaceSnaps
         </div>
         <div className="grid gap-3 sm:grid-cols-3">
           <MetricTile label="Evidence" value={snapshot.evidence.length} />
-          <MetricTile label="Criteria" value={snapshot.searchCriteria.length} />
-          <MetricTile label="Synthetic" value={snapshot.profile.synthetic ? 1 : 0} />
+          <MetricTile label="Preferences" value={snapshot.searchCriteria.length} />
+          <MetricTile label="Synthetic Profile" value={snapshot.profile.synthetic ? 1 : 0} />
         </div>
         <p className="break-words rounded-md bg-muted px-3 py-2 font-mono text-xs text-muted-foreground">
           {snapshot.profile.id}
@@ -310,7 +636,7 @@ function CandidateEvidencePanel({ evidence }: { evidence: readonly CandidateEvid
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Evidence Bank</CardTitle>
+        <CardTitle>Profile Evidence</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-3">
         {evidence.map((item) => (
@@ -341,7 +667,7 @@ function CandidateCriteriaPanel({ criteria }: { criteria: readonly SearchCriteri
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Search Criteria</CardTitle>
+        <CardTitle>Job Preferences</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-3">
         {criteria.map((item) => (
@@ -365,7 +691,7 @@ function CandidateSafetyPanel({ snapshot }: { snapshot: CandidateWorkspaceSnapsh
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Candidate Safety</CardTitle>
+        <CardTitle>Profile Data Safety</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-3">
         <p className="text-sm leading-5 text-muted-foreground">{snapshot.safetyNote}</p>
@@ -421,21 +747,48 @@ function ApplicationsWorkspace({
   );
 }
 
-function SettingsWorkspace({
-  snapshot,
+function ApprovalsWorkspace({
+  reviewSnapshot,
+  approvalSnapshot,
   health
 }: {
-  snapshot: SettingsSnapshot;
+  reviewSnapshot: ReviewQueueSnapshot;
+  approvalSnapshot: ApprovalSnapshot;
   health: ApiHealthStatus;
 }) {
   return (
     <div className="grid gap-4 p-4 sm:p-6 xl:grid-cols-[1.55fr_0.95fr]">
       <section className="grid gap-4">
-        <RuntimeCapabilityPanel capabilities={snapshot.runtime.capabilities} />
+        <ApprovalRequestsPanel snapshot={approvalSnapshot} />
       </section>
       <section className="grid content-start gap-4">
-        <RuntimeSettingsPanel snapshot={snapshot} />
+        <ApprovalSummaryPanel snapshot={approvalSnapshot} />
+        <ReviewSummaryPanel snapshot={reviewSnapshot} />
         <HealthPanel health={health} />
+        <GuardrailPanel />
+      </section>
+    </div>
+  );
+}
+
+function SystemStatusWorkspace({
+  settingsSnapshot,
+  auditSnapshot,
+  health
+}: {
+  settingsSnapshot: SettingsSnapshot;
+  auditSnapshot: AuditSnapshot;
+  health: ApiHealthStatus;
+}) {
+  return (
+    <div className="grid gap-4 p-4 sm:p-6 xl:grid-cols-[1.55fr_0.95fr]">
+      <section className="grid gap-4">
+        <RuntimeCapabilityPanel capabilities={settingsSnapshot.runtime.capabilities} />
+        <RuntimeSettingsPanel snapshot={settingsSnapshot} />
+      </section>
+      <section className="grid content-start gap-4">
+        <HealthPanel health={health} />
+        <AuditSummaryPanel snapshot={auditSnapshot} />
         <GuardrailPanel />
       </section>
     </div>
@@ -505,63 +858,6 @@ function SourcesWorkspace({
         <GuardrailPanel />
       </section>
     </div>
-  );
-}
-
-function SourcePolicyPanel({ policies }: { policies: readonly SourcePolicy[] }) {
-  const summary = getSourcePolicySummary(policies);
-
-  return (
-    <Card>
-      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <CardTitle>Source Policy Status</CardTitle>
-        <div className="flex flex-wrap gap-2">
-          <Badge tone="success">Allowed {summary.allowed}</Badge>
-          <Badge tone="warning">Manual {summary.manualOnly}</Badge>
-          <Badge tone="danger">Blocked {summary.blocked}</Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="overflow-x-auto p-0">
-        <table className="min-w-full border-separate border-spacing-0 text-sm">
-          <thead>
-            <tr className="text-left text-xs uppercase tracking-[0.12em] text-muted-foreground">
-              <th className="border-b border-border px-4 py-3 font-semibold">Source</th>
-              <th className="border-b border-border px-4 py-3 font-semibold">Domain</th>
-              <th className="border-b border-border px-4 py-3 font-semibold">Type</th>
-              <th className="border-b border-border px-4 py-3 font-semibold">Status</th>
-              <th className="border-b border-border px-4 py-3 font-semibold">Actions</th>
-              <th className="border-b border-border px-4 py-3 text-right font-semibold">
-                Confidence
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {policies.map((policy) => (
-              <tr key={policy.name} className="border-b border-border last:border-0">
-                <td className="border-b border-border px-4 py-3 font-medium">{policy.name}</td>
-                <td className="border-b border-border px-4 py-3 text-muted-foreground">
-                  {policy.domain}
-                </td>
-                <td className="border-b border-border px-4 py-3 text-muted-foreground">
-                  {policy.type}
-                </td>
-                <td className="border-b border-border px-4 py-3">
-                  <PolicyBadge status={policy.status} />
-                </td>
-                <td className="border-b border-border px-4 py-3 text-muted-foreground">
-                  {policy.allowedActions.length > 0 ? policy.allowedActions.join(", ") : "none"}
-                </td>
-                <td className="border-b border-border px-4 py-3 text-right font-mono text-xs">
-                  {typeof policy.confidence === "number"
-                    ? `${Math.round(policy.confidence * 100)}%`
-                    : "review"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </CardContent>
-    </Card>
   );
 }
 
@@ -803,7 +1099,7 @@ function PipelinePanel() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Application Pipeline</CardTitle>
+        <CardTitle>Application Progress</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="grid gap-3 md:grid-cols-5">
@@ -830,7 +1126,7 @@ function ReviewQueuePanel({ items }: { items: readonly ReviewQueueBucket[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Review Queue</CardTitle>
+        <CardTitle>Reviews Needed</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-3">
         {items.map((item) => (
@@ -859,10 +1155,12 @@ function JobsPreviewPanel({ snapshot }: { snapshot: JobCatalogSnapshot }) {
   return (
     <Card>
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <CardTitle>Job Catalog</CardTitle>
+        <CardTitle>Jobs</CardTitle>
         <div className="flex flex-wrap gap-2">
-          <Badge tone={snapshot.source === "api" ? "info" : "warning"}>{snapshot.source}</Badge>
-          <Badge tone="info">{snapshot.summary.total} synthetic records</Badge>
+          <Badge tone={snapshot.source === "api" ? "info" : "warning"}>
+            {formatDataSource(snapshot.source)}
+          </Badge>
+          <Badge tone="info">{snapshot.summary.total} jobs</Badge>
         </div>
       </CardHeader>
       <CardContent className="grid gap-3">
@@ -897,48 +1195,22 @@ function ApplicationTrackerPreview({ snapshot }: { snapshot: ApplicationSnapshot
   return (
     <Card>
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <CardTitle>Application Tracker</CardTitle>
+        <CardTitle>Applications</CardTitle>
         <div className="flex flex-wrap gap-2">
-          <Badge tone={snapshot.source === "api" ? "info" : "warning"}>{snapshot.source}</Badge>
+          <Badge tone={snapshot.source === "api" ? "info" : "warning"}>
+            {formatDataSource(snapshot.source)}
+          </Badge>
           <Badge tone={snapshot.summary.externalSideEffects > 0 ? "danger" : "success"}>
-            {snapshot.summary.externalSideEffects} external side effects
+            {snapshot.summary.externalSideEffects} safety flags
           </Badge>
         </div>
       </CardHeader>
       <CardContent className="grid gap-4">
         <div className="grid gap-2 sm:grid-cols-4">
           <MetricTile label="Tracked" value={snapshot.summary.total} />
-          <MetricTile label="Review" value={snapshot.summary.inReview} />
+          <MetricTile label="Needs Review" value={snapshot.summary.inReview} />
           <MetricTile label="Approved" value={snapshot.summary.approved} />
           <MetricTile label="Submitted" value={snapshot.summary.submitted} />
-        </div>
-        <p className="text-sm leading-5 text-muted-foreground">{snapshot.detail}</p>
-      </CardContent>
-    </Card>
-  );
-}
-
-function RuntimePosturePreview({ snapshot }: { snapshot: SettingsSnapshot }) {
-  const disabledCount = snapshot.runtime.capabilities.filter((capability) => !capability.enabled).length;
-
-  return (
-    <Card>
-      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <CardTitle>Runtime Posture</CardTitle>
-        <div className="flex flex-wrap gap-2">
-          <Badge tone={snapshot.source === "api" ? "info" : "warning"}>{snapshot.source}</Badge>
-          <Badge tone="success">{disabledCount} disabled capabilities</Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="grid gap-4">
-        <div className="grid gap-2 sm:grid-cols-4">
-          <MetricTile label="Audit Schema" value={snapshot.runtime.auditSchemaVersion} />
-          <MetricTile label="DB Config" value={snapshot.runtime.databaseConfigured ? 1 : 0} />
-          <MetricTile label="Redis Config" value={snapshot.runtime.redisConfigured ? 1 : 0} />
-          <MetricTile
-            label="Integrations"
-            value={snapshot.runtime.externalIntegrationsEnabled ? 1 : 0}
-          />
         </div>
         <p className="text-sm leading-5 text-muted-foreground">{snapshot.detail}</p>
       </CardContent>
@@ -951,13 +1223,15 @@ function JobSummaryPanel({ snapshot }: { snapshot: JobCatalogSnapshot }) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-3">
         <CardTitle>Job Summary</CardTitle>
-        <Badge tone={snapshot.source === "api" ? "info" : "warning"}>{snapshot.source}</Badge>
+        <Badge tone={snapshot.source === "api" ? "info" : "warning"}>
+          {formatDataSource(snapshot.source)}
+        </Badge>
       </CardHeader>
       <CardContent className="grid gap-4">
         <div className="grid grid-cols-2 gap-2">
           <MetricTile label="Total" value={snapshot.summary.total} />
           <MetricTile label="Ready" value={snapshot.summary.ready} />
-          <MetricTile label="Review" value={snapshot.summary.needsReview} />
+          <MetricTile label="Needs Review" value={snapshot.summary.needsReview} />
           <MetricTile label="Remote" value={snapshot.summary.remote} />
           <MetricTile label="Hybrid" value={snapshot.summary.hybrid} />
           <MetricTile label="Onsite" value={snapshot.summary.onsite} />
@@ -978,16 +1252,18 @@ function ApplicationSummaryPanel({ snapshot }: { snapshot: ApplicationSnapshot }
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-3">
         <CardTitle>Application Summary</CardTitle>
-        <Badge tone={snapshot.source === "api" ? "info" : "warning"}>{snapshot.source}</Badge>
+        <Badge tone={snapshot.source === "api" ? "info" : "warning"}>
+          {formatDataSource(snapshot.source)}
+        </Badge>
       </CardHeader>
       <CardContent className="grid gap-4">
         <div className="grid grid-cols-2 gap-2">
           <MetricTile label="Tracked" value={snapshot.summary.total} />
           <MetricTile label="Not Started" value={snapshot.summary.notStarted} />
-          <MetricTile label="Review" value={snapshot.summary.inReview} />
+          <MetricTile label="Needs Review" value={snapshot.summary.inReview} />
           <MetricTile label="Approved" value={snapshot.summary.approved} />
           <MetricTile label="Submitted" value={snapshot.summary.submitted} />
-          <MetricTile label="Side Effects" value={snapshot.summary.externalSideEffects} />
+          <MetricTile label="Safety Flags" value={snapshot.summary.externalSideEffects} />
         </div>
         <p className="text-sm leading-5 text-muted-foreground">{snapshot.detail}</p>
         {snapshot.checkedUrl ? (
@@ -1005,16 +1281,18 @@ function RuntimeSettingsPanel({ snapshot }: { snapshot: SettingsSnapshot }) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-3">
         <CardTitle>Runtime Settings</CardTitle>
-        <Badge tone={snapshot.source === "api" ? "info" : "warning"}>{snapshot.source}</Badge>
+        <Badge tone={snapshot.source === "api" ? "info" : "warning"}>
+          {formatDataSource(snapshot.source)}
+        </Badge>
       </CardHeader>
       <CardContent className="grid gap-4">
         <div className="grid grid-cols-2 gap-2">
           <MetricTile label="Audit Schema" value={snapshot.runtime.auditSchemaVersion} />
-          <MetricTile label="DB Config" value={snapshot.runtime.databaseConfigured ? 1 : 0} />
-          <MetricTile label="Redis Config" value={snapshot.runtime.redisConfigured ? 1 : 0} />
+          <MetricTile label="Database" value={snapshot.runtime.databaseConfigured ? 1 : 0} />
+          <MetricTile label="Redis" value={snapshot.runtime.redisConfigured ? 1 : 0} />
           <MetricTile label="Secrets" value={snapshot.runtime.secretsLoaded ? 1 : 0} />
           <MetricTile
-            label="External"
+            label="External Integrations"
             value={snapshot.runtime.externalIntegrationsEnabled ? 1 : 0}
           />
           <MetricTile label="Capabilities" value={snapshot.runtime.capabilities.length} />
@@ -1041,13 +1319,15 @@ function ReviewSummaryPanel({ snapshot }: { snapshot: ReviewQueueSnapshot }) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-3">
         <CardTitle>Review Summary</CardTitle>
-        <Badge tone={snapshot.source === "api" ? "info" : "warning"}>{snapshot.source}</Badge>
+        <Badge tone={snapshot.source === "api" ? "info" : "warning"}>
+          {formatDataSource(snapshot.source)}
+        </Badge>
       </CardHeader>
       <CardContent className="grid gap-4">
         <div className="grid grid-cols-3 gap-2">
           <MetricTile label="Total" value={snapshot.summary.total} />
           <MetricTile label="Ready" value={snapshot.summary.ready} />
-          <MetricTile label="Review" value={snapshot.summary.needsReview} />
+          <MetricTile label="Needs Review" value={snapshot.summary.needsReview} />
         </div>
         <p className="text-sm leading-5 text-muted-foreground">{snapshot.detail}</p>
         {snapshot.checkedUrl ? (
@@ -1064,7 +1344,7 @@ function ApprovalSummaryPanel({ snapshot }: { snapshot: ApprovalSnapshot }) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-3">
-        <CardTitle>Approval Gates</CardTitle>
+        <CardTitle>Approvals</CardTitle>
         <Badge tone={snapshot.summary.pending > 0 ? "warning" : "success"}>
           {snapshot.summary.pending} pending
         </Badge>
@@ -1075,7 +1355,7 @@ function ApprovalSummaryPanel({ snapshot }: { snapshot: ApprovalSnapshot }) {
           <MetricTile label="Changes" value={snapshot.summary.needsChanges} />
         </div>
         <p className="text-sm leading-5 text-muted-foreground">
-          Manual approval records only. No autofill, submit, or external side effects.
+          Manual approval records only. No autofill or submit action is available.
         </p>
       </CardContent>
     </Card>
@@ -1087,7 +1367,9 @@ function ApprovalRequestsPanel({ snapshot }: { snapshot: ApprovalSnapshot }) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-3">
         <CardTitle>Approval Requests</CardTitle>
-        <Badge tone={snapshot.source === "api" ? "info" : "warning"}>{snapshot.source}</Badge>
+        <Badge tone={snapshot.source === "api" ? "info" : "warning"}>
+          {formatDataSource(snapshot.source)}
+        </Badge>
       </CardHeader>
       <CardContent className="grid gap-4">
         <div className="grid grid-cols-4 gap-2">
@@ -1235,8 +1517,8 @@ function JobCatalogTable({ jobs }: { jobs: readonly JobItem[] }) {
   return (
     <Card>
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <CardTitle>Synthetic Job Postings</CardTitle>
-        <Badge tone="info">{jobs.length} synthetic records</Badge>
+        <CardTitle>Jobs</CardTitle>
+        <Badge tone="info">{jobs.length} jobs</Badge>
       </CardHeader>
       <CardContent className="overflow-x-auto p-0">
         <table className="min-w-[1100px] border-separate border-spacing-0 text-sm">
@@ -1245,7 +1527,7 @@ function JobCatalogTable({ jobs }: { jobs: readonly JobItem[] }) {
               <th className="border-b border-border px-4 py-3 font-semibold">Job</th>
               <th className="border-b border-border px-4 py-3 font-semibold">Source</th>
               <th className="border-b border-border px-4 py-3 font-semibold">Location</th>
-              <th className="border-b border-border px-4 py-3 font-semibold">Comp</th>
+              <th className="border-b border-border px-4 py-3 font-semibold">Pay</th>
               <th className="border-b border-border px-4 py-3 font-semibold">Skills</th>
               <th className="border-b border-border px-4 py-3 font-semibold">Status</th>
               <th className="border-b border-border px-4 py-3 text-right font-semibold">
@@ -1300,16 +1582,16 @@ function ApplicationTable({ applications }: { applications: readonly Application
   return (
     <Card>
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <CardTitle>Application Records</CardTitle>
-        <Badge tone="info">{applications.length} tracked records</Badge>
+        <CardTitle>Applications</CardTitle>
+        <Badge tone="info">{applications.length} tracked</Badge>
       </CardHeader>
       <CardContent className="overflow-x-auto p-0">
         {applications.length === 0 ? (
           <div className="grid gap-3 px-4 py-8">
             <p className="text-sm font-medium">No application records have been created.</p>
             <p className="max-w-2xl text-sm leading-5 text-muted-foreground">
-              Phase 1 keeps applications read-only: no drafting packet, autofill, browser handoff,
-              or submit operation is available from this workspace.
+              This workspace is read-only for now: no drafting packet, autofill, browser handoff,
+              or submit operation is available.
             </p>
           </div>
         ) : (
@@ -1349,10 +1631,10 @@ function ApplicationTable({ applications }: { applications: readonly Application
                   <td className="border-b border-border px-4 py-3 align-top">
                     <div className="flex flex-wrap gap-2">
                       <Badge tone={application.safety.submitPerformed ? "danger" : "success"}>
-                        submit {application.safety.submitPerformed ? "yes" : "no"}
+                        submitted {application.safety.submitPerformed ? "yes" : "no"}
                       </Badge>
                       <Badge tone={application.safety.autofillPerformed ? "danger" : "success"}>
-                        autofill {application.safety.autofillPerformed ? "yes" : "no"}
+                        autofilled {application.safety.autofillPerformed ? "yes" : "no"}
                       </Badge>
                       {application.synthetic ? <Badge tone="info">synthetic</Badge> : null}
                     </div>
@@ -1418,8 +1700,8 @@ function ReviewQueueTable({ items }: { items: readonly ReviewJobItem[] }) {
   return (
     <Card>
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <CardTitle>Extracted Job Review</CardTitle>
-        <Badge tone="info">{items.length} synthetic records</Badge>
+        <CardTitle>Reviews Needed</CardTitle>
+        <Badge tone="info">{items.length} jobs</Badge>
       </CardHeader>
       <CardContent className="overflow-x-auto p-0">
         <table className="min-w-[1040px] border-separate border-spacing-0 text-sm">
@@ -1428,7 +1710,7 @@ function ReviewQueueTable({ items }: { items: readonly ReviewJobItem[] }) {
               <th className="border-b border-border px-4 py-3 font-semibold">Job</th>
               <th className="border-b border-border px-4 py-3 font-semibold">Source</th>
               <th className="border-b border-border px-4 py-3 font-semibold">Location</th>
-              <th className="border-b border-border px-4 py-3 font-semibold">Comp</th>
+              <th className="border-b border-border px-4 py-3 font-semibold">Pay</th>
               <th className="border-b border-border px-4 py-3 font-semibold">Skills</th>
               <th className="border-b border-border px-4 py-3 font-semibold">Status</th>
               <th className="border-b border-border px-4 py-3 text-right font-semibold">
@@ -1474,33 +1756,6 @@ function ReviewQueueTable({ items }: { items: readonly ReviewJobItem[] }) {
             ))}
           </tbody>
         </table>
-      </CardContent>
-    </Card>
-  );
-}
-
-function AuditFeed({ events }: { events: readonly AuditEvent[] }) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Audit Feed</CardTitle>
-      </CardHeader>
-      <CardContent className="grid gap-4">
-        {events.map((event) => (
-          <div key={event.id} className="grid gap-2 sm:grid-cols-[80px_1fr]">
-            <time className="font-mono text-xs text-muted-foreground">{event.occurredAt}</time>
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge tone={event.actor === "system" ? "info" : "neutral"}>{event.actor}</Badge>
-                <p className="text-sm font-semibold">{event.action}</p>
-              </div>
-              <p className="mt-1 break-words text-sm text-muted-foreground">{event.subject}</p>
-              <p className="mt-1 break-words font-mono text-xs text-muted-foreground">
-                {event.provenance}
-              </p>
-            </div>
-          </div>
-        ))}
       </CardContent>
     </Card>
   );
@@ -1556,6 +1811,128 @@ function GuardrailPanel() {
   );
 }
 
+function SafeModePanel({
+  source,
+  chainValid
+}: {
+  source: SettingsSnapshot["source"];
+  chainValid: boolean;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Safety Status</CardTitle>
+      </CardHeader>
+      <CardContent className="grid gap-3 text-sm">
+        <div className="flex min-h-10 items-center justify-between gap-3">
+          <span className="text-muted-foreground">Data source</span>
+          <Badge tone={source === "api" ? "info" : "warning"}>{formatDataSource(source)}</Badge>
+        </div>
+        <div className="flex min-h-10 items-center justify-between gap-3">
+          <span className="text-muted-foreground">Audit chain</span>
+          <Badge tone={chainValid ? "success" : "danger"}>
+            {chainValid ? "valid" : "invalid"}
+          </Badge>
+        </div>
+        <p className="text-sm leading-5 text-muted-foreground">
+          Job Search hides administrative controls while keeping guardrail status visible.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ContextHelpPopover({
+  areaLabel,
+  title,
+  content,
+  onClose
+}: {
+  areaLabel: string;
+  title: string;
+  content: HelpContent;
+  onClose: () => void;
+}) {
+  return (
+    <aside
+      aria-label={title}
+      className="absolute right-0 top-10 z-40 w-[min(calc(100vw-2rem),390px)] rounded-md border border-border bg-white shadow-lg"
+    >
+      <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone="info">{areaLabel}</Badge>
+            <BookOpen className="size-4 text-muted-foreground" aria-hidden="true" />
+          </div>
+          <h2 className="mt-2 text-sm font-semibold text-foreground">{title}</h2>
+        </div>
+        <button
+          type="button"
+          aria-label="Close help"
+          onClick={onClose}
+          className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+        >
+          <X className="size-4" aria-hidden="true" />
+        </button>
+      </div>
+      <div className="grid max-h-[70vh] gap-4 overflow-y-auto px-4 py-4 text-sm">
+        <HelpSection
+          icon={Info}
+          title="What this view shows"
+          items={[content.shows]}
+          ordered={false}
+        />
+        <HelpSection
+          icon={ListChecks}
+          title="What you can do here"
+          items={content.actions}
+          ordered
+        />
+        <HelpSection
+          icon={ShieldCheck}
+          title="Safety guardrails"
+          items={content.guardrails}
+          ordered={false}
+        />
+        <div className="rounded-md border border-border bg-muted/50 px-3 py-3 text-xs leading-5 text-muted-foreground">
+          No crawling, LLM calls, browser automation, autofill, or submissions are available in
+          this phase.
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function HelpSection({
+  icon: Icon,
+  title,
+  items,
+  ordered
+}: {
+  icon: typeof Info;
+  title: string;
+  items: readonly string[];
+  ordered: boolean;
+}) {
+  const ListTag = ordered ? "ol" : "ul";
+
+  return (
+    <section className="grid gap-2">
+      <div className="flex items-center gap-2">
+        <Icon className="size-4 text-accent" aria-hidden="true" />
+        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+      </div>
+      <ListTag className={cn("grid gap-2 text-muted-foreground", ordered && "list-decimal pl-5", !ordered && "list-disc pl-5")}>
+        {items.map((item) => (
+          <li key={item} className="leading-5">
+            {item}
+          </li>
+        ))}
+      </ListTag>
+    </section>
+  );
+}
+
 function GuardrailRow({
   icon: Icon,
   label
@@ -1572,67 +1949,75 @@ function GuardrailRow({
 }
 
 function viewEyebrow(view: DashboardView) {
-  if (view === "candidate") {
-    return "Candidate workspace";
+  if (view === "profile") {
+    return "Job search";
   }
 
-  if (view === "sources") {
-    return "Source governance";
+  if (view === "admin-sources") {
+    return "Administration";
   }
 
   if (view === "jobs") {
-    return "Job catalog";
+    return "Job search";
   }
 
-  if (view === "review") {
-    return "Review queue";
+  if (view === "reviews-needed") {
+    return "Job search";
   }
 
   if (view === "applications") {
-    return "Application tracker";
+    return "Job search";
   }
 
-  if (view === "audit") {
-    return "Audit trail";
+  if (view === "admin-approvals") {
+    return "Administration";
   }
 
-  if (view === "settings") {
-    return "Runtime settings";
+  if (view === "admin-audit") {
+    return "Administration";
   }
 
-  return "Operations dashboard";
+  if (view === "admin-system") {
+    return "Administration";
+  }
+
+  return "Job search";
 }
 
 function viewTitle(view: DashboardView) {
-  if (view === "candidate") {
-    return "Synthetic candidate profile";
+  if (view === "profile") {
+    return "Profile and preferences";
   }
 
-  if (view === "sources") {
-    return "Source registry and policy checks";
+  if (view === "admin-sources") {
+    return "Sources and policy checks";
   }
 
   if (view === "jobs") {
-    return "Synthetic job postings";
+    return "Jobs";
   }
 
-  if (view === "review") {
-    return "Extracted job review";
+  if (view === "reviews-needed") {
+    return "Reviews needed";
   }
 
   if (view === "applications") {
-    return "Read-only application records";
+    return "Applications";
   }
 
-  if (view === "audit") {
-    return "Hash-chained audit events";
+  if (view === "admin-approvals") {
+    return "Approval requests";
   }
 
-  if (view === "settings") {
-    return "Safe runtime posture";
+  if (view === "admin-audit") {
+    return "Audit log";
   }
 
-  return "Governed application workflow";
+  if (view === "admin-system") {
+    return "System status";
+  }
+
+  return "Job search overview";
 }
 
 function SkillList({ skills }: { skills: readonly string[] }) {
@@ -1818,6 +2203,18 @@ function formatTimestamp(value: string) {
     hour: "2-digit",
     minute: "2-digit"
   });
+}
+
+function formatDataSource(source: string) {
+  if (source === "api") {
+    return "API data";
+  }
+
+  if (source === "local") {
+    return "Local fallback";
+  }
+
+  return source;
 }
 
 type PolicyCheckResult = SourcePolicyDecision & {

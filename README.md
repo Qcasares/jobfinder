@@ -37,6 +37,10 @@ pnpm api:test
 
 The checked-in OpenAPI artifact is `docs/openapi/jobfinder-openapi.json`. Regenerate it with `pnpm api:openapi:write` after intentional API contract changes. The API health endpoint is `http://127.0.0.1:8000/health`. The web app defaults to `http://localhost:3000`.
 
+## Deployment
+
+Use `docs/vercel-deployment.md` for the Vercel production runbook. Deploy the FastAPI API and Next.js web dashboard as separate Vercel projects from this monorepo, and run database migrations explicitly before promoting the API.
+
 ## Guardrails
 
 Unknown sources deny every action until reviewed. Audit events are append-only through the service layer and hash-chained for tamper evidence. Use only synthetic fixtures and sanitized examples in this repository.

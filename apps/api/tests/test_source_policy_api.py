@@ -134,3 +134,29 @@ def test_untrusted_origin_does_not_receive_cors_allow_origin(
 
     assert response.status_code == 400
     assert "access-control-allow-origin" not in response.headers
+
+
+def test_production_write_guard_blocks_policy_mutation_without_opt_in(tmp_path: Path) -> None:
+    database_url = f"sqlite+pysqlite:///{tmp_path / 'production-api.db'}"
+    engine = get_engine(database_url)
+    Base.metadata.create_all(engine)
+    app = create_app(
+        Settings(
+            database_url=database_url,
+            service_name="jobfinder-api",
+            environment="production",
+        )
+    )
+
+    with TestClient(app) as client:
+        health_response = client.get("/health")
+        policy_response = client.post(
+            "/source-policies/check",
+            json={"domain": "unknown.example", "action": "discover"},
+        )
+
+    assert health_response.status_code == 200
+    assert health_response.headers["x-content-type-options"] == "nosniff"
+    assert health_response.headers["referrer-policy"] == "no-referrer"
+    assert policy_response.status_code == 403
+    assert "Write API is disabled in production" in policy_response.json()["detail"]

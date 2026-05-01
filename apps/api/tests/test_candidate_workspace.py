@@ -163,3 +163,30 @@ def test_candidate_endpoint_rejects_real_contact_like_text(
     )
 
     assert response.status_code == 422
+
+
+def test_production_write_guard_blocks_candidate_mutation(tmp_path: Path) -> None:
+    database_url = f"sqlite+pysqlite:///{tmp_path / 'candidate-production.db'}"
+    engine = get_engine(database_url)
+    Base.metadata.create_all(engine)
+    app = create_app(
+        Settings(
+            database_url=database_url,
+            service_name="jobfinder-api",
+            environment="production",
+        )
+    )
+
+    with TestClient(app) as client:
+        workspace_response = client.get("/candidate/workspace")
+        profile_response = client.post(
+            "/candidate/profile",
+            json={
+                "profile_name": "Synthetic Candidate Variant",
+                "summary": "Synthetic summary for dashboard testing only.",
+                "synthetic": True,
+            },
+        )
+
+    assert workspace_response.status_code == 200
+    assert profile_response.status_code == 403
