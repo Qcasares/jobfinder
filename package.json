@@ -1,0 +1,21 @@
+{
+  "name": "jobfinder",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.29.3",
+  "scripts": {
+    "dev": "pnpm --filter @jobfinder/web dev",
+    "build": "pnpm --filter @jobfinder/web build",
+    "lint": "pnpm --filter @jobfinder/web lint",
+    "typecheck": "pnpm --filter @jobfinder/web typecheck",
+    "test": "pnpm --filter @jobfinder/web test",
+    "client:typecheck": "pnpm --filter @jobfinder/api-client typecheck",
+    "client:test": "pnpm --filter @jobfinder/api-client test",
+    "api:openapi": "cd apps/api && uv run python -m app.tools.openapi_contract --check",
+    "api:openapi:write": "cd apps/api && uv run python -m app.tools.openapi_contract --output ../../docs/openapi/jobfinder-openapi.json",
+    "api:test": "cd apps/api && uv run pytest",
+    "api:lint": "cd apps/api && uv run ruff check .",
+    "api:typecheck": "cd apps/api && uv run mypy app tests",
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm client:typecheck && pnpm client:test && pnpm api:lint && pnpm api:typecheck && pnpm api:openapi && pnpm api:test"
+  }
+}

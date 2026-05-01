@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Builds
+.next/
+out/
+dist/
+build/
+coverage/
+htmlcov/
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Databases and local volumes
+*.sqlite
+*.sqlite3
+postgres-data/
+redis-data/
+
+# OS/editor
+.DS_Store
+.idea/
+.vscode/
+

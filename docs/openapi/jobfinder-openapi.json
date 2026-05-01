@@ -1,0 +1,2934 @@
+{
+  "components": {
+    "schemas": {
+      "ActorType": {
+        "enum": [
+          "user",
+          "system",
+          "worker"
+        ],
+        "title": "ActorType",
+        "type": "string"
+      },
+      "ApplicationRead": {
+        "properties": {
+          "application_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Application Url"
+          },
+          "approval_request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Request Id"
+          },
+          "company": {
+            "title": "Company",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "job_posting_id": {
+            "title": "Job Posting Id",
+            "type": "string"
+          },
+          "job_title": {
+            "title": "Job Title",
+            "type": "string"
+          },
+          "safety": {
+            "$ref": "#/components/schemas/ApplicationSafety"
+          },
+          "status": {
+            "enum": [
+              "not_started",
+              "ready_for_review",
+              "approved",
+              "submitted",
+              "withdrawn"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
+          "synthetic": {
+            "default": true,
+            "title": "Synthetic",
+            "type": "boolean"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "job_posting_id",
+          "approval_request_id",
+          "job_title",
+          "company",
+          "status",
+          "application_url",
+          "submitted_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ApplicationRead",
+        "type": "object"
+      },
+      "ApplicationSafety": {
+        "properties": {
+          "autofill_performed": {
+            "default": false,
+            "title": "Autofill Performed",
+            "type": "boolean"
+          },
+          "external_side_effect": {
+            "default": false,
+            "title": "External Side Effect",
+            "type": "boolean"
+          },
+          "submit_performed": {
+            "default": false,
+            "title": "Submit Performed",
+            "type": "boolean"
+          }
+        },
+        "title": "ApplicationSafety",
+        "type": "object"
+      },
+      "ApplicationSummary": {
+        "properties": {
+          "approved": {
+            "minimum": 0.0,
+            "title": "Approved",
+            "type": "integer"
+          },
+          "external_side_effects": {
+            "minimum": 0.0,
+            "title": "External Side Effects",
+            "type": "integer"
+          },
+          "in_review": {
+            "minimum": 0.0,
+            "title": "In Review",
+            "type": "integer"
+          },
+          "not_started": {
+            "minimum": 0.0,
+            "title": "Not Started",
+            "type": "integer"
+          },
+          "submitted": {
+            "minimum": 0.0,
+            "title": "Submitted",
+            "type": "integer"
+          },
+          "total": {
+            "minimum": 0.0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "not_started",
+          "in_review",
+          "approved",
+          "submitted",
+          "external_side_effects"
+        ],
+        "title": "ApplicationSummary",
+        "type": "object"
+      },
+      "ApprovalDecisionCreate": {
+        "properties": {
+          "decision": {
+            "enum": [
+              "approved",
+              "rejected",
+              "needs_changes"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "reason": {
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "reviewer_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Reviewer Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reviewer_id",
+          "decision",
+          "reason"
+        ],
+        "title": "ApprovalDecisionCreate",
+        "type": "object"
+      },
+      "ApprovalRequestCreate": {
+        "properties": {
+          "reason": {
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "request_type": {
+            "const": "manual_review",
+            "default": "manual_review",
+            "title": "Request Type",
+            "type": "string"
+          },
+          "requester_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Requester Id",
+            "type": "string"
+          },
+          "review_item_id": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Review Item Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "review_item_id",
+          "requester_id",
+          "reason"
+        ],
+        "title": "ApprovalRequestCreate",
+        "type": "object"
+      },
+      "ApprovalRequestRead": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "job_posting_id": {
+            "title": "Job Posting Id",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "request_type": {
+            "const": "manual_review",
+            "title": "Request Type",
+            "type": "string"
+          },
+          "requested_at": {
+            "format": "date-time",
+            "title": "Requested At",
+            "type": "string"
+          },
+          "requester_id": {
+            "title": "Requester Id",
+            "type": "string"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "review_item_id": {
+            "title": "Review Item Id",
+            "type": "string"
+          },
+          "reviewer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewer Id"
+          },
+          "safety": {
+            "$ref": "#/components/schemas/ApprovalSafety"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "approved",
+              "rejected",
+              "needs_changes"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "review_item_id",
+          "job_posting_id",
+          "requester_id",
+          "reviewer_id",
+          "request_type",
+          "status",
+          "reason",
+          "requested_at",
+          "resolved_at"
+        ],
+        "title": "ApprovalRequestRead",
+        "type": "object"
+      },
+      "ApprovalRequestSummary": {
+        "properties": {
+          "approved": {
+            "minimum": 0.0,
+            "title": "Approved",
+            "type": "integer"
+          },
+          "needs_changes": {
+            "minimum": 0.0,
+            "title": "Needs Changes",
+            "type": "integer"
+          },
+          "pending": {
+            "minimum": 0.0,
+            "title": "Pending",
+            "type": "integer"
+          },
+          "rejected": {
+            "minimum": 0.0,
+            "title": "Rejected",
+            "type": "integer"
+          },
+          "total": {
+            "minimum": 0.0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "pending",
+          "approved",
+          "rejected",
+          "needs_changes"
+        ],
+        "title": "ApprovalRequestSummary",
+        "type": "object"
+      },
+      "ApprovalSafety": {
+        "properties": {
+          "application_created": {
+            "default": false,
+            "title": "Application Created",
+            "type": "boolean"
+          },
+          "autofill_performed": {
+            "default": false,
+            "title": "Autofill Performed",
+            "type": "boolean"
+          },
+          "submit_performed": {
+            "default": false,
+            "title": "Submit Performed",
+            "type": "boolean"
+          }
+        },
+        "title": "ApprovalSafety",
+        "type": "object"
+      },
+      "AuditChainVerification": {
+        "properties": {
+          "event_count": {
+            "minimum": 0.0,
+            "title": "Event Count",
+            "type": "integer"
+          },
+          "invalid_event_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invalid Event Id"
+          },
+          "latest_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Hash"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "valid": {
+            "title": "Valid",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "valid",
+          "event_count",
+          "latest_hash",
+          "invalid_event_id",
+          "reason"
+        ],
+        "title": "AuditChainVerification",
+        "type": "object"
+      },
+      "AuditExplorerEvent": {
+        "properties": {
+          "actor_id": {
+            "title": "Actor Id",
+            "type": "string"
+          },
+          "actor_type": {
+            "$ref": "#/components/schemas/ActorType"
+          },
+          "correlation_id": {
+            "title": "Correlation Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "event_hash": {
+            "maxLength": 64,
+            "minLength": 64,
+            "title": "Event Hash",
+            "type": "string"
+          },
+          "event_type": {
+            "title": "Event Type",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "Payload",
+            "type": "object"
+          },
+          "previous_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Hash"
+          },
+          "schema_version": {
+            "minimum": 1.0,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "event_type",
+          "actor_type",
+          "actor_id",
+          "correlation_id",
+          "schema_version",
+          "previous_hash",
+          "event_hash",
+          "payload",
+          "created_at"
+        ],
+        "title": "AuditExplorerEvent",
+        "type": "object"
+      },
+      "AuditExplorerSummary": {
+        "properties": {
+          "chain": {
+            "$ref": "#/components/schemas/AuditChainVerification"
+          },
+          "counts_by_actor_type": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Counts By Actor Type",
+            "type": "object"
+          },
+          "counts_by_event_type": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Counts By Event Type",
+            "type": "object"
+          },
+          "latest_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Hash"
+          },
+          "total_events": {
+            "minimum": 0.0,
+            "title": "Total Events",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_events",
+          "counts_by_event_type",
+          "counts_by_actor_type",
+          "latest_hash",
+          "chain"
+        ],
+        "title": "AuditExplorerSummary",
+        "type": "object"
+      },
+      "CandidateEvidenceCreate": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 1200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "evidence_type": {
+            "enum": [
+              "skill",
+              "project",
+              "experience",
+              "credential"
+            ],
+            "title": "Evidence Type",
+            "type": "string"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "synthetic": {
+            "const": true,
+            "default": true,
+            "title": "Synthetic",
+            "type": "boolean"
+          },
+          "title": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "evidence_type",
+          "title"
+        ],
+        "title": "CandidateEvidenceCreate",
+        "type": "object"
+      },
+      "CandidateEvidenceRead": {
+        "properties": {
+          "candidate_profile_id": {
+            "title": "Candidate Profile Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "evidence_type": {
+            "enum": [
+              "skill",
+              "project",
+              "experience",
+              "credential"
+            ],
+            "title": "Evidence Type",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "synthetic": {
+            "default": true,
+            "title": "Synthetic",
+            "type": "boolean"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "verified_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified At"
+          }
+        },
+        "required": [
+          "id",
+          "candidate_profile_id",
+          "evidence_type",
+          "title",
+          "description",
+          "source_url",
+          "verified_at",
+          "created_at"
+        ],
+        "title": "CandidateEvidenceRead",
+        "type": "object"
+      },
+      "CandidateProfileRead": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "profile_name": {
+            "title": "Profile Name",
+            "type": "string"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "synthetic": {
+            "default": true,
+            "title": "Synthetic",
+            "type": "boolean"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "profile_name",
+          "summary",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CandidateProfileRead",
+        "type": "object"
+      },
+      "CandidateProfileUpdate": {
+        "properties": {
+          "profile_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Profile Name",
+            "type": "string"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "maxLength": 1200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "synthetic": {
+            "const": true,
+            "default": true,
+            "title": "Synthetic",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "profile_name"
+        ],
+        "title": "CandidateProfileUpdate",
+        "type": "object"
+      },
+      "CandidateWorkspaceRead": {
+        "properties": {
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/CandidateEvidenceRead"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "profile": {
+            "$ref": "#/components/schemas/CandidateProfileRead"
+          },
+          "safety_note": {
+            "title": "Safety Note",
+            "type": "string"
+          },
+          "search_criteria": {
+            "items": {
+              "$ref": "#/components/schemas/SearchCriteriaRead"
+            },
+            "title": "Search Criteria",
+            "type": "array"
+          }
+        },
+        "required": [
+          "profile",
+          "evidence",
+          "search_criteria",
+          "safety_note"
+        ],
+        "title": "CandidateWorkspaceRead",
+        "type": "object"
+      },
+      "DashboardAuditFeedItem": {
+        "properties": {
+          "actor": {
+            "title": "Actor",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "event_type": {
+            "title": "Event Type",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "synthetic": {
+            "default": true,
+            "title": "Synthetic",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "event_type",
+          "actor",
+          "summary",
+          "created_at"
+        ],
+        "title": "DashboardAuditFeedItem",
+        "type": "object"
+      },
+      "DashboardCounts": {
+        "properties": {
+          "applications": {
+            "minimum": 0.0,
+            "title": "Applications",
+            "type": "integer"
+          },
+          "approval_requests": {
+            "minimum": 0.0,
+            "title": "Approval Requests",
+            "type": "integer"
+          },
+          "audit_events": {
+            "minimum": 0.0,
+            "title": "Audit Events",
+            "type": "integer"
+          },
+          "job_postings": {
+            "minimum": 0.0,
+            "title": "Job Postings",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "job_postings",
+          "approval_requests",
+          "applications",
+          "audit_events"
+        ],
+        "title": "DashboardCounts",
+        "type": "object"
+      },
+      "DashboardStatus": {
+        "properties": {
+          "database": {
+            "title": "Database",
+            "type": "string"
+          },
+          "policy_mode": {
+            "title": "Policy Mode",
+            "type": "string"
+          },
+          "service": {
+            "title": "Service",
+            "type": "string"
+          }
+        },
+        "required": [
+          "service",
+          "database",
+          "policy_mode"
+        ],
+        "title": "DashboardStatus",
+        "type": "object"
+      },
+      "DashboardSummary": {
+        "properties": {
+          "audit_feed": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardAuditFeedItem"
+            },
+            "title": "Audit Feed",
+            "type": "array"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/DashboardCounts"
+          },
+          "status": {
+            "$ref": "#/components/schemas/DashboardStatus"
+          }
+        },
+        "required": [
+          "counts",
+          "status",
+          "audit_feed"
+        ],
+        "title": "DashboardSummary",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HealthResponse": {
+        "properties": {
+          "service": {
+            "title": "Service",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "service"
+        ],
+        "title": "HealthResponse",
+        "type": "object"
+      },
+      "JobListItem": {
+        "properties": {
+          "application_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Application Url"
+          },
+          "company": {
+            "title": "Company",
+            "type": "string"
+          },
+          "employment_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employment Type"
+          },
+          "external_id": {
+            "title": "External Id",
+            "type": "string"
+          },
+          "extraction_confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Extraction Confidence",
+            "type": "number"
+          },
+          "fixture_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fixture Name"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "locations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Locations",
+            "type": "array"
+          },
+          "posted_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Posted Date"
+          },
+          "preferred_skills": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Preferred Skills",
+            "type": "array"
+          },
+          "remote_type": {
+            "enum": [
+              "remote",
+              "hybrid",
+              "onsite",
+              "unknown"
+            ],
+            "title": "Remote Type",
+            "type": "string"
+          },
+          "required_skills": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Required Skills",
+            "type": "array"
+          },
+          "review_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Review Reasons",
+            "type": "array"
+          },
+          "review_status": {
+            "enum": [
+              "ready",
+              "needs_review"
+            ],
+            "title": "Review Status",
+            "type": "string"
+          },
+          "salary_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Salary Currency"
+          },
+          "salary_max": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Salary Max"
+          },
+          "salary_min": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Salary Min"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "source_url": {
+            "title": "Source Url",
+            "type": "string"
+          },
+          "synthetic": {
+            "default": true,
+            "title": "Synthetic",
+            "type": "boolean"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "valid_through": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid Through"
+          }
+        },
+        "required": [
+          "id",
+          "source",
+          "external_id",
+          "title",
+          "company",
+          "locations",
+          "remote_type",
+          "salary_min",
+          "salary_max",
+          "salary_currency",
+          "employment_type",
+          "posted_date",
+          "valid_through",
+          "source_url",
+          "application_url",
+          "review_status",
+          "review_reasons",
+          "extraction_confidence",
+          "required_skills",
+          "preferred_skills",
+          "fixture_name"
+        ],
+        "title": "JobListItem",
+        "type": "object"
+      },
+      "JobSummary": {
+        "properties": {
+          "hybrid": {
+            "minimum": 0.0,
+            "title": "Hybrid",
+            "type": "integer"
+          },
+          "needs_review": {
+            "minimum": 0.0,
+            "title": "Needs Review",
+            "type": "integer"
+          },
+          "onsite": {
+            "minimum": 0.0,
+            "title": "Onsite",
+            "type": "integer"
+          },
+          "ready": {
+            "minimum": 0.0,
+            "title": "Ready",
+            "type": "integer"
+          },
+          "remote": {
+            "minimum": 0.0,
+            "title": "Remote",
+            "type": "integer"
+          },
+          "total": {
+            "minimum": 0.0,
+            "title": "Total",
+            "type": "integer"
+          },
+          "unknown_remote": {
+            "minimum": 0.0,
+            "title": "Unknown Remote",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "ready",
+          "needs_review",
+          "remote",
+          "hybrid",
+          "onsite",
+          "unknown_remote"
+        ],
+        "title": "JobSummary",
+        "type": "object"
+      },
+      "JsonValue": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "integer"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "items": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "type": "array"
+          },
+          {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "type": "object"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "PolicyAction": {
+        "enum": [
+          "discover",
+          "extract",
+          "draft",
+          "autofill",
+          "submit"
+        ],
+        "title": "PolicyAction",
+        "type": "string"
+      },
+      "PolicyDecision": {
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/PolicyAction"
+          },
+          "allowed": {
+            "title": "Allowed",
+            "type": "boolean"
+          },
+          "policy_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Policy Id"
+          },
+          "reason": {
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PolicyStatus"
+          }
+        },
+        "required": [
+          "allowed",
+          "action",
+          "status",
+          "reason",
+          "source_id",
+          "policy_id"
+        ],
+        "title": "PolicyDecision",
+        "type": "object"
+      },
+      "PolicyStatus": {
+        "enum": [
+          "allowed",
+          "denied",
+          "not_allowed",
+          "review_required",
+          "unknown_source"
+        ],
+        "title": "PolicyStatus",
+        "type": "string"
+      },
+      "ReviewProvenanceHint": {
+        "properties": {
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "field_name": {
+            "title": "Field Name",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "title": "Note",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field_name",
+          "source",
+          "confidence"
+        ],
+        "title": "ReviewProvenanceHint",
+        "type": "object"
+      },
+      "ReviewQueueItem": {
+        "properties": {
+          "application_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Application Url"
+          },
+          "company": {
+            "title": "Company",
+            "type": "string"
+          },
+          "data_origin": {
+            "enum": [
+              "synthetic_adapter_fixture",
+              "synthetic_raw_posting"
+            ],
+            "title": "Data Origin",
+            "type": "string"
+          },
+          "employment_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employment Type"
+          },
+          "external_id": {
+            "title": "External Id",
+            "type": "string"
+          },
+          "extraction_confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Extraction Confidence",
+            "type": "number"
+          },
+          "fixture_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fixture Name"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "locations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Locations",
+            "type": "array"
+          },
+          "posted_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Posted Date"
+          },
+          "preferred_skills": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Preferred Skills",
+            "type": "array"
+          },
+          "provenance_hints": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ReviewProvenanceHint"
+            },
+            "title": "Provenance Hints",
+            "type": "object"
+          },
+          "remote_type": {
+            "enum": [
+              "remote",
+              "hybrid",
+              "onsite",
+              "unknown"
+            ],
+            "title": "Remote Type",
+            "type": "string"
+          },
+          "required_skills": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Required Skills",
+            "type": "array"
+          },
+          "review_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Review Reasons",
+            "type": "array"
+          },
+          "review_status": {
+            "enum": [
+              "ready",
+              "needs_review"
+            ],
+            "title": "Review Status",
+            "type": "string"
+          },
+          "salary_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Salary Currency"
+          },
+          "salary_max": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Salary Max"
+          },
+          "salary_min": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Salary Min"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "source_url": {
+            "title": "Source Url",
+            "type": "string"
+          },
+          "synthetic": {
+            "default": true,
+            "title": "Synthetic",
+            "type": "boolean"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "valid_through": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid Through"
+          }
+        },
+        "required": [
+          "id",
+          "source",
+          "external_id",
+          "source_url",
+          "application_url",
+          "title",
+          "company",
+          "locations",
+          "remote_type",
+          "salary_min",
+          "salary_max",
+          "salary_currency",
+          "employment_type",
+          "posted_date",
+          "valid_through",
+          "required_skills",
+          "preferred_skills",
+          "review_status",
+          "review_reasons",
+          "extraction_confidence",
+          "provenance_hints",
+          "data_origin"
+        ],
+        "title": "ReviewQueueItem",
+        "type": "object"
+      },
+      "ReviewQueueSummary": {
+        "properties": {
+          "needs_review": {
+            "minimum": 0.0,
+            "title": "Needs Review",
+            "type": "integer"
+          },
+          "ready": {
+            "minimum": 0.0,
+            "title": "Ready",
+            "type": "integer"
+          },
+          "total": {
+            "minimum": 0.0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "ready",
+          "needs_review"
+        ],
+        "title": "ReviewQueueSummary",
+        "type": "object"
+      },
+      "RuntimeCapability": {
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "key": {
+            "enum": [
+              "source_policy_gate",
+              "audit_hash_chain",
+              "single_user_local_mode",
+              "live_crawling",
+              "llm_calls",
+              "browser_automation",
+              "autofill_submit",
+              "real_candidate_data"
+            ],
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "enabled",
+          "detail"
+        ],
+        "title": "RuntimeCapability",
+        "type": "object"
+      },
+      "RuntimeSettingsRead": {
+        "properties": {
+          "audit_schema_version": {
+            "minimum": 1.0,
+            "title": "Audit Schema Version",
+            "type": "integer"
+          },
+          "capabilities": {
+            "items": {
+              "$ref": "#/components/schemas/RuntimeCapability"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "database_configured": {
+            "title": "Database Configured",
+            "type": "boolean"
+          },
+          "environment": {
+            "title": "Environment",
+            "type": "string"
+          },
+          "external_integrations_enabled": {
+            "default": false,
+            "title": "External Integrations Enabled",
+            "type": "boolean"
+          },
+          "redis_configured": {
+            "title": "Redis Configured",
+            "type": "boolean"
+          },
+          "secrets_loaded": {
+            "default": false,
+            "title": "Secrets Loaded",
+            "type": "boolean"
+          },
+          "service_name": {
+            "title": "Service Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "service_name",
+          "environment",
+          "audit_schema_version",
+          "database_configured",
+          "redis_configured",
+          "capabilities"
+        ],
+        "title": "RuntimeSettingsRead",
+        "type": "object"
+      },
+      "SearchCriteriaCreate": {
+        "properties": {
+          "location": {
+            "anyOf": [
+              {
+                "maxLength": 240,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "query": {
+            "maxLength": 800,
+            "minLength": 1,
+            "title": "Query",
+            "type": "string"
+          },
+          "remote_type": {
+            "default": "unknown",
+            "enum": [
+              "remote",
+              "hybrid",
+              "onsite",
+              "unknown"
+            ],
+            "title": "Remote Type",
+            "type": "string"
+          },
+          "salary_max": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Salary Max"
+          },
+          "salary_min": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Salary Min"
+          },
+          "synthetic": {
+            "const": true,
+            "default": true,
+            "title": "Synthetic",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "query"
+        ],
+        "title": "SearchCriteriaCreate",
+        "type": "object"
+      },
+      "SearchCriteriaRead": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "query": {
+            "title": "Query",
+            "type": "string"
+          },
+          "remote_type": {
+            "enum": [
+              "remote",
+              "hybrid",
+              "onsite",
+              "unknown"
+            ],
+            "title": "Remote Type",
+            "type": "string"
+          },
+          "salary_max": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Salary Max"
+          },
+          "salary_min": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Salary Min"
+          },
+          "synthetic": {
+            "default": true,
+            "title": "Synthetic",
+            "type": "boolean"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "name",
+          "query",
+          "location",
+          "remote_type",
+          "salary_min",
+          "salary_max",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "SearchCriteriaRead",
+        "type": "object"
+      },
+      "SourcePolicyCheckRequest": {
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/PolicyAction"
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domain"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "maxLength": 36,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "title": "SourcePolicyCheckRequest",
+        "type": "object"
+      },
+      "SourcePolicyEvidenceRead": {
+        "properties": {
+          "captured_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captured At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "evidence_type": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Evidence Type",
+            "type": "string"
+          },
+          "excerpt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Excerpt"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "evidence_type",
+          "id",
+          "captured_at",
+          "created_at"
+        ],
+        "title": "SourcePolicyEvidenceRead",
+        "type": "object"
+      },
+      "SourcePolicyRead": {
+        "properties": {
+          "allowed_actions": {
+            "items": {
+              "$ref": "#/components/schemas/PolicyAction"
+            },
+            "title": "Allowed Actions",
+            "type": "array"
+          },
+          "denied_actions": {
+            "items": {
+              "$ref": "#/components/schemas/PolicyAction"
+            },
+            "title": "Denied Actions",
+            "type": "array"
+          },
+          "effective_from": {
+            "format": "date-time",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "effective_to": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective To"
+          },
+          "evidence_items": {
+            "items": {
+              "$ref": "#/components/schemas/SourcePolicyEvidenceRead"
+            },
+            "title": "Evidence Items",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "source_id",
+          "status",
+          "reason",
+          "allowed_actions",
+          "denied_actions",
+          "effective_from",
+          "effective_to",
+          "evidence_items"
+        ],
+        "title": "SourcePolicyRead",
+        "type": "object"
+      },
+      "SourcePolicySummary": {
+        "properties": {
+          "allowed_actions": {
+            "items": {
+              "$ref": "#/components/schemas/PolicyAction"
+            },
+            "title": "Allowed Actions",
+            "type": "array"
+          },
+          "denied_actions": {
+            "items": {
+              "$ref": "#/components/schemas/PolicyAction"
+            },
+            "title": "Denied Actions",
+            "type": "array"
+          },
+          "effective_from": {
+            "format": "date-time",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "reason",
+          "allowed_actions",
+          "denied_actions",
+          "effective_from"
+        ],
+        "title": "SourcePolicySummary",
+        "type": "object"
+      },
+      "SourceRead": {
+        "properties": {
+          "base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "domain": {
+            "title": "Domain",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "latest_policy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourcePolicySummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "source_type": {
+            "title": "Source Type",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "source_type",
+          "base_url",
+          "domain",
+          "created_at",
+          "updated_at",
+          "latest_policy"
+        ],
+        "title": "SourceRead",
+        "type": "object"
+      },
+      "SourceUpsertRequest": {
+        "properties": {
+          "base_url": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "domain": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Domain",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "source_type": {
+            "default": "job_board",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Source Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "domain"
+        ],
+        "title": "SourceUpsertRequest",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Jobfinder API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/applications": {
+      "get": {
+        "operationId": "list_applications_applications_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ApplicationRead"
+                  },
+                  "title": "Response List Applications Applications Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Applications"
+      }
+    },
+    "/applications/summary": {
+      "get": {
+        "operationId": "applications_summary_applications_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Applications Summary"
+      }
+    },
+    "/approvals/requests": {
+      "get": {
+        "operationId": "list_approval_requests_approvals_requests_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ApprovalRequestRead"
+                  },
+                  "title": "Response List Approval Requests Approvals Requests Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Approval Requests"
+      },
+      "post": {
+        "operationId": "create_approval_request_approvals_requests_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApprovalRequestCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalRequestRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Approval Request"
+      }
+    },
+    "/approvals/requests/{request_id}/decision": {
+      "post": {
+        "operationId": "decide_approval_request_approvals_requests__request_id__decision_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApprovalDecisionCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalRequestRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Decide Approval Request"
+      }
+    },
+    "/approvals/summary": {
+      "get": {
+        "operationId": "approval_summary_approvals_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalRequestSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Approval Summary"
+      }
+    },
+    "/audit/events": {
+      "get": {
+        "operationId": "list_audit_events_audit_events_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "correlation_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Correlation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AuditExplorerEvent"
+                  },
+                  "title": "Response List Audit Events Audit Events Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Audit Events"
+      }
+    },
+    "/audit/summary": {
+      "get": {
+        "operationId": "audit_summary_audit_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditExplorerSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Audit Summary"
+      }
+    },
+    "/audit/verify-chain": {
+      "get": {
+        "operationId": "verify_audit_chain_audit_verify_chain_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditChainVerification"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Verify Audit Chain"
+      }
+    },
+    "/candidate/evidence": {
+      "post": {
+        "operationId": "create_candidate_evidence_candidate_evidence_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CandidateEvidenceCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateEvidenceRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Candidate Evidence"
+      }
+    },
+    "/candidate/profile": {
+      "post": {
+        "operationId": "update_candidate_profile_candidate_profile_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CandidateProfileUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateProfileRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Candidate Profile"
+      }
+    },
+    "/candidate/search-criteria": {
+      "post": {
+        "operationId": "create_candidate_search_criteria_candidate_search_criteria_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchCriteriaCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchCriteriaRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Candidate Search Criteria"
+      }
+    },
+    "/candidate/workspace": {
+      "get": {
+        "operationId": "candidate_workspace_candidate_workspace_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateWorkspaceRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Candidate Workspace"
+      }
+    },
+    "/dashboard/summary": {
+      "get": {
+        "operationId": "dashboard_summary_dashboard_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Dashboard Summary"
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health"
+      }
+    },
+    "/jobs": {
+      "get": {
+        "operationId": "list_jobs_jobs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "all",
+                "ready",
+                "needs_review"
+              ],
+              "title": "Status",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/JobListItem"
+                  },
+                  "title": "Response List Jobs Jobs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Jobs"
+      }
+    },
+    "/jobs/summary": {
+      "get": {
+        "operationId": "jobs_summary_jobs_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Jobs Summary"
+      }
+    },
+    "/review/queue": {
+      "get": {
+        "operationId": "review_queue_review_queue_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "all",
+                "ready",
+                "needs_review"
+              ],
+              "title": "Status",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ReviewQueueItem"
+                  },
+                  "title": "Response Review Queue Review Queue Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Review Queue"
+      }
+    },
+    "/review/summary": {
+      "get": {
+        "operationId": "review_summary_review_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewQueueSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Review Summary"
+      }
+    },
+    "/settings/runtime": {
+      "get": {
+        "operationId": "runtime_settings_settings_runtime_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuntimeSettingsRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Runtime Settings"
+      }
+    },
+    "/source-policies": {
+      "get": {
+        "operationId": "list_source_policies_source_policies_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SourcePolicyRead"
+                  },
+                  "title": "Response List Source Policies Source Policies Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Source Policies"
+      }
+    },
+    "/source-policies/check": {
+      "post": {
+        "operationId": "check_source_policy_source_policies_check_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourcePolicyCheckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyDecision"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Check Source Policy"
+      }
+    },
+    "/source-policies/seed-known": {
+      "post": {
+        "operationId": "seed_known_source_policies_source_policies_seed_known_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SourcePolicyRead"
+                  },
+                  "title": "Response Seed Known Source Policies Source Policies Seed Known Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Seed Known Source Policies"
+      }
+    },
+    "/sources": {
+      "get": {
+        "operationId": "list_sources_sources_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SourceRead"
+                  },
+                  "title": "Response List Sources Sources Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Sources"
+      },
+      "post": {
+        "operationId": "upsert_source_sources_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceUpsertRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Upsert Source"
+      }
+    }
+  }
+}

@@ -1,0 +1,33 @@
+repos:
+  - repo: local
+    hooks:
+      - id: api-ruff
+        name: API ruff
+        entry: bash -c 'cd apps/api && uv run ruff check .'
+        language: system
+        pass_filenames: false
+      - id: mypy
+        name: API mypy
+        entry: bash -c 'cd apps/api && uv run mypy app tests'
+        language: system
+        pass_filenames: false
+      - id: web-lint
+        name: Web lint
+        entry: bash -c 'pnpm --filter @jobfinder/web lint'
+        language: system
+        pass_filenames: false
+      - id: web-typecheck
+        name: Web typecheck
+        entry: bash -c 'pnpm --filter @jobfinder/web typecheck'
+        language: system
+        pass_filenames: false
+      - id: api-client-typecheck
+        name: API client typecheck
+        entry: bash -c 'pnpm --filter @jobfinder/api-client typecheck'
+        language: system
+        pass_filenames: false
+      - id: api-client-test
+        name: API client tests
+        entry: bash -c 'pnpm --filter @jobfinder/api-client test'
+        language: system
+        pass_filenames: false

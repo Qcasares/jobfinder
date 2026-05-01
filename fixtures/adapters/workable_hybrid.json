@@ -1,0 +1,28 @@
+{
+  "jobs": [
+    {
+      "shortcode": "wk-500",
+      "title": "Customer Success Manager",
+      "company": "Umbrella Corp",
+      "url": "https://apply.workable.com/umbrella/j/wk-500",
+      "application_url": "https://apply.workable.com/umbrella/j/wk-500/apply",
+      "locations": [
+        {
+          "location_str": "Berlin, Germany"
+        },
+        {
+          "location_str": "Amsterdam, Netherlands"
+        }
+      ],
+      "employment_type": "full_time",
+      "workplace": "hybrid",
+      "salary": {
+        "min": 60000,
+        "max": 80000,
+        "currency": "EUR"
+      },
+      "created_at": "2026-03-01",
+      "valid_through": "2026-07-01"
+    }
+  ]
+}

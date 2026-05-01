@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: jobfinder
+          POSTGRES_USER: jobfinder
+          POSTGRES_PASSWORD: jobfinder
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U jobfinder -d jobfinder"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+      - run: uv sync
+      - run: uv run ruff check .
+      - run: uv run mypy app tests
+      - run: uv run python -m app.tools.openapi_contract --check
+      - run: uv run alembic upgrade head
+        env:
+          DATABASE_URL: postgresql+psycopg://jobfinder:jobfinder@localhost:5432/jobfinder
+      - run: uv run pytest
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.29.3
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+      - run: pnpm client:typecheck
+      - run: pnpm client:test

@@ -1,0 +1,21 @@
+{
+  "jobs": [
+    {
+      "id": "ash-300",
+      "title": "ML Infrastructure Engineer",
+      "companyName": "Globex",
+      "jobUrl": "https://jobs.ashbyhq.com/globex/ash-300",
+      "applyUrl": "https://jobs.ashbyhq.com/globex/ash-300/application",
+      "location": "Remote - Canada",
+      "isRemote": true,
+      "employmentType": "Full-time",
+      "publishedDate": "2026-02-10",
+      "validThrough": "2026-09-01",
+      "compensation": {
+        "min": 90000,
+        "max": 130000,
+        "currency": "USD"
+      }
+    }
+  ]
+}

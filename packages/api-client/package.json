@@ -1,0 +1,27 @@
+{
+  "name": "@jobfinder/api-client",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Placeholder for the future OpenAPI-generated Jobfinder TypeScript API client.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "README.md",
+    "src"
+  ],
+  "scripts": {
+    "generate": "echo \"OpenAPI client generation is not wired yet.\"",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.14"
+  }
+}
