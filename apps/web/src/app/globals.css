@@ -283,11 +283,10 @@ a {
   text-decoration: none;
 }
 
-/* Focus ring */
+/* Focus ring — let elements keep their own radius so the ring traces it */
 :where(button, a, input, select, textarea, [role="button"], [role="switch"], [role="tab"]):focus-visible {
   outline: none;
   box-shadow: var(--shadow-focus);
-  border-radius: var(--radius-sm);
 }
 
 /* Skip link */

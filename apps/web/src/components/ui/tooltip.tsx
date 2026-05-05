@@ -1,4 +1,12 @@
-import type { ReactNode } from "react";
+import {
+  Children,
+  cloneElement,
+  isValidElement,
+  useId,
+  type AriaAttributes,
+  type ReactElement,
+  type ReactNode
+} from "react";
 import { cn } from "@/lib/utils";
 
 export type TooltipSide = "top" | "right" | "bottom" | "left";
@@ -23,10 +31,25 @@ export function Tooltip({
   children,
   className
 }: TooltipProps) {
+  const id = useId();
+  // If the child is a single element, link aria-describedby to it so the
+  // tooltip is announced when the trigger receives keyboard focus. Otherwise
+  // fall back to applying it on the wrapper so screen readers that traverse
+  // ancestors can still find it.
+  const onlyChild = Children.toArray(children).find(isValidElement) as
+    | ReactElement<AriaAttributes>
+    | undefined;
+  const trigger = onlyChild
+    ? cloneElement(onlyChild, { "aria-describedby": id })
+    : children;
   return (
-    <span className={cn("group/tooltip relative inline-flex", className)}>
-      {children}
+    <span
+      className={cn("group/tooltip relative inline-flex", className)}
+      aria-describedby={onlyChild ? undefined : id}
+    >
+      {trigger}
       <span
+        id={id}
         role="tooltip"
         className={cn(
           "pointer-events-none absolute z-50 whitespace-nowrap rounded-md border border-border bg-surface px-2 py-1 text-xs text-foreground shadow-md opacity-0 transition group-hover/tooltip:opacity-100 group-focus-within/tooltip:opacity-100",

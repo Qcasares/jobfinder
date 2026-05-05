@@ -125,11 +125,13 @@ export function Sidebar({
   return (
     <>
       {/* Mobile backdrop */}
-      <div
-        aria-hidden={!open}
+      <button
+        type="button"
+        aria-label="Close navigation"
+        tabIndex={open ? 0 : -1}
         onClick={onClose}
         className={cn(
-          "fixed inset-0 z-30 bg-black/40 backdrop-blur-sm transition-opacity lg:hidden",
+          "fixed inset-0 z-30 block w-full cursor-default border-none bg-black/40 backdrop-blur-sm transition-opacity lg:hidden",
           open ? "opacity-100" : "pointer-events-none opacity-0"
         )}
       />
