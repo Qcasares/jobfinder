@@ -39,6 +39,9 @@ The checked-in OpenAPI artifact is `docs/openapi/jobfinder-openapi.json`. Regene
 
 ## Deployment
 
+Production dashboard: `https://jobfinder.quentincasares.com`.
+Production API: `https://api.jobfinder.quentincasares.com`.
+
 Use `docs/vercel-deployment.md` for the Vercel production runbook. Deploy the FastAPI API and Next.js web dashboard as separate Vercel projects from this monorepo, and run database migrations explicitly before promoting the API.
 
 ## Guardrails

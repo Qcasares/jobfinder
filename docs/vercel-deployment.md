@@ -4,13 +4,20 @@ Jobfinder should deploy to Vercel as two projects from the same GitHub repositor
 
 ## Project Shape
 
+Current production URLs:
+
+- Web: `https://jobfinder.quentincasares.com`
+- API: `https://api.jobfinder.quentincasares.com`
+- Fallback web alias: `https://jobfinder-qcasares-projects.vercel.app`
+- Fallback API alias: `https://jobfinder-api-qcasares-projects.vercel.app`
+
 ### API Project
 
 - Root Directory: `apps/api`
 - Framework Preset: FastAPI or Other
 - Runtime: Vercel Python runtime
 - FastAPI entrypoint: `[project.scripts] app = "app.main:app"` in `apps/api/pyproject.toml`
-- Production URL example: `https://jobfinder-api.vercel.app`
+- Production URL: `https://api.jobfinder.quentincasares.com`
 
 Required production environment variables:
 
@@ -19,7 +26,7 @@ JOBFINDER_API_ENVIRONMENT=production
 JOBFINDER_API_WRITE_API_ENABLED=false
 JOBFINDER_API_DATABASE_URL=<managed-postgres-sqlalchemy-url>
 JOBFINDER_API_REDIS_URL=
-JOBFINDER_API_CORS_ALLOWED_ORIGINS=["https://<web-project-domain>"]
+JOBFINDER_API_CORS_ALLOWED_ORIGINS=["https://jobfinder.quentincasares.com","https://jobfinder-qcasares-projects.vercel.app"]
 ```
 
 Do not deploy the API without a managed Postgres database. The local default database URL points at Docker Compose and is not valid in Vercel. Redis is included for future readiness but no queue worker depends on it in this tranche.
@@ -41,12 +48,12 @@ Do not run migrations automatically in the Vercel build command. Builds can run 
 - Framework Preset: Next.js
 - Package manager: pnpm
 - Build Command: `pnpm build`
-- Production URL example: `https://jobfinder.vercel.app`
+- Production URL: `https://jobfinder.quentincasares.com`
 
 Required production environment variables:
 
 ```text
-NEXT_PUBLIC_API_BASE_URL=https://<api-project-domain>
+NEXT_PUBLIC_API_BASE_URL=https://api.jobfinder.quentincasares.com
 ```
 
 The dashboard page is marked dynamic so Vercel renders it per request and reads the current API/fallback state instead of freezing build-time data.
