@@ -1,0 +1,33 @@
+{
+  "@context": "https://schema.org",
+  "@type": "JobPosting",
+  "identifier": {
+    "name": "Stark Industries",
+    "value": "jsonld-600"
+  },
+  "title": "Security Engineer",
+  "url": "https://careers.stark.example/jobs/jsonld-600",
+  "applicationContact": "https://careers.stark.example/jobs/jsonld-600/apply",
+  "hiringOrganization": {
+    "@type": "Organization",
+    "name": "Stark Industries"
+  },
+  "jobLocationType": "TELECOMMUTE",
+  "applicantLocationRequirements": {
+    "@type": "Country",
+    "name": "United States"
+  },
+  "employmentType": "CONTRACTOR",
+  "baseSalary": {
+    "@type": "MonetaryAmount",
+    "currency": "USD",
+    "value": {
+      "@type": "QuantitativeValue",
+      "minValue": 80,
+      "maxValue": 120,
+      "unitText": "HOUR"
+    }
+  },
+  "datePosted": "2026-02-20",
+  "validThrough": "2026-08-01"
+}

@@ -1,0 +1,24 @@
+{
+  "postings": [
+    {
+      "id": "lev-200",
+      "text": "Platform Engineer",
+      "hostedUrl": "https://jobs.lever.co/acmerobotics/lev-200",
+      "applyUrl": "https://jobs.lever.co/acmerobotics/lev-200/apply",
+      "company": "Acme Robotics",
+      "categories": {
+        "location": "New York, NY; Remote - US",
+        "commitment": "Full-time"
+      },
+      "workplaceType": "remote",
+      "createdAt": 1772532000000,
+      "validThrough": "2026-10-01",
+      "lists": [
+        {
+          "text": "Compensation",
+          "content": "$120,000 - $150,000 USD"
+        }
+      ]
+    }
+  ]
+}

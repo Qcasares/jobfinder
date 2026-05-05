@@ -1,0 +1,23 @@
+{
+  "content": [
+    {
+      "id": "sr-400",
+      "name": "Data Analyst",
+      "ref": "https://jobs.smartrecruiters.com/Initech/sr-400-data-analyst",
+      "applyUrl": "https://jobs.smartrecruiters.com/Initech/sr-400-data-analyst/apply",
+      "company": {
+        "name": "Initech"
+      },
+      "location": {
+        "city": "Austin",
+        "region": "TX",
+        "country": "US"
+      },
+      "typeOfEmployment": "FULL_TIME",
+      "remote": false,
+      "releasedDate": "2025-12-15T12:00:00.000Z",
+      "validThrough": "2026-01-01",
+      "salary": null
+    }
+  ]
+}

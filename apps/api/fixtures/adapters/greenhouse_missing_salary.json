@@ -1,0 +1,24 @@
+{
+  "jobs": [
+    {
+      "id": 101,
+      "absolute_url": "https://boards.greenhouse.io/acmerobotics/jobs/101",
+      "apply_url": "https://boards.greenhouse.io/acmerobotics/jobs/101#app",
+      "title": "Backend Engineer",
+      "company": "Acme Robotics",
+      "location": {
+        "name": "London, UK"
+      },
+      "metadata": [
+        {
+          "name": "Employment Type",
+          "value": "Full-time"
+        }
+      ],
+      "remote": false,
+      "updated_at": "2026-03-01T09:30:00Z",
+      "valid_through": null,
+      "salary": null
+    }
+  ]
+}
