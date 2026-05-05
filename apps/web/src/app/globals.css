@@ -1,37 +1,266 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------------------------------------------------------------------------
+   Design tokens — light theme defaults
+   --------------------------------------------------------------------------*/
 :root {
-  --background: #f6f7f9;
-  --foreground: #15181e;
-  --card: #ffffff;
-  --card-foreground: #15181e;
-  --muted: #eef1f4;
-  --muted-foreground: #667085;
-  --border: #d9dee7;
-  --primary: #155eef;
+  /* surfaces */
+  --background: #f5f7fb;
+  --surface: #ffffff;
+  --surface-2: #eef2f7;
+  --surface-3: #e3e9f1;
+
+  /* text */
+  --foreground: #0f172a;
+  --foreground-muted: #475569;
+  --foreground-subtle: #64748b;
+
+  /* borders */
+  --border: #dbe2ec;
+  --border-strong: #b9c3d4;
+
+  /* brand */
+  --primary: #2f5bff;
+  --primary-hover: #2548d6;
   --primary-foreground: #ffffff;
+  --primary-soft: #e3ebff;
+  --primary-soft-foreground: #1e3aa8;
+
+  /* accent (teal) */
   --accent: #0e9384;
-  --warning: #dc6803;
-  --danger: #d92d20;
+  --accent-soft: #d2f1ec;
+  --accent-soft-foreground: #0a6359;
+
+  /* semantic tones */
+  --success: #047857;
+  --success-soft: #d6f1e3;
+  --success-soft-foreground: #065f46;
+
+  --warning: #b45309;
+  --warning-soft: #fceec5;
+  --warning-soft-foreground: #92400e;
+
+  --danger: #b91c1c;
+  --danger-soft: #fadcd9;
+  --danger-soft-foreground: #991b1b;
+
+  --info: #1d4ed8;
+  --info-soft: #dde7fb;
+  --info-soft-foreground: #1d4ed8;
+
+  /* gradients */
+  --gradient-hero: linear-gradient(
+    135deg,
+    rgba(47, 91, 255, 0.18),
+    rgba(14, 147, 132, 0.18)
+  );
+  --gradient-brand: linear-gradient(135deg, #2f5bff 0%, #0e9384 100%);
+
+  /* radius */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+
+  /* shadows */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 6px 16px -8px rgba(15, 23, 42, 0.18),
+    0 2px 4px -2px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 24px 48px -24px rgba(15, 23, 42, 0.28),
+    0 4px 12px -6px rgba(15, 23, 42, 0.12);
+  --shadow-focus: 0 0 0 3px rgba(47, 91, 255, 0.32);
+
+  color-scheme: light;
 }
 
+/* ---------------------------------------------------------------------------
+   Dark theme — explicit class on html
+   --------------------------------------------------------------------------*/
+.dark,
+:root.dark {
+  --background: #0b1120;
+  --surface: #111a2e;
+  --surface-2: #1a2540;
+  --surface-3: #243154;
+
+  --foreground: #f1f5f9;
+  --foreground-muted: #b1bccd;
+  --foreground-subtle: #8a96ab;
+
+  --border: #2a3553;
+  --border-strong: #3a4870;
+
+  --primary: #6585ff;
+  --primary-hover: #7793ff;
+  --primary-foreground: #0b1120;
+  --primary-soft: #1c2a55;
+  --primary-soft-foreground: #b9c8ff;
+
+  --accent: #5cd0c0;
+  --accent-soft: #16332f;
+  --accent-soft-foreground: #aae8de;
+
+  --success: #4ade80;
+  --success-soft: #14342a;
+  --success-soft-foreground: #b6f0ce;
+
+  --warning: #fbbf24;
+  --warning-soft: #3a2c0c;
+  --warning-soft-foreground: #fde68a;
+
+  --danger: #f87171;
+  --danger-soft: #3b1818;
+  --danger-soft-foreground: #fca5a5;
+
+  --info: #60a5fa;
+  --info-soft: #18264a;
+  --info-soft-foreground: #bfdbfe;
+
+  --gradient-hero: linear-gradient(
+    135deg,
+    rgba(101, 133, 255, 0.22),
+    rgba(92, 208, 192, 0.22)
+  );
+  --gradient-brand: linear-gradient(135deg, #6585ff 0%, #5cd0c0 100%);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 6px 16px -8px rgba(0, 0, 0, 0.6),
+    0 2px 4px -2px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 24px 48px -24px rgba(0, 0, 0, 0.7),
+    0 4px 12px -6px rgba(0, 0, 0, 0.5);
+  --shadow-focus: 0 0 0 3px rgba(101, 133, 255, 0.45);
+
+  color-scheme: dark;
+}
+
+/* ---------------------------------------------------------------------------
+   Auto dark theme via prefers-color-scheme when user hasn't picked light
+   --------------------------------------------------------------------------*/
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --background: #0b1120;
+    --surface: #111a2e;
+    --surface-2: #1a2540;
+    --surface-3: #243154;
+
+    --foreground: #f1f5f9;
+    --foreground-muted: #b1bccd;
+    --foreground-subtle: #8a96ab;
+
+    --border: #2a3553;
+    --border-strong: #3a4870;
+
+    --primary: #6585ff;
+    --primary-hover: #7793ff;
+    --primary-foreground: #0b1120;
+    --primary-soft: #1c2a55;
+    --primary-soft-foreground: #b9c8ff;
+
+    --accent: #5cd0c0;
+    --accent-soft: #16332f;
+    --accent-soft-foreground: #aae8de;
+
+    --success: #4ade80;
+    --success-soft: #14342a;
+    --success-soft-foreground: #b6f0ce;
+
+    --warning: #fbbf24;
+    --warning-soft: #3a2c0c;
+    --warning-soft-foreground: #fde68a;
+
+    --danger: #f87171;
+    --danger-soft: #3b1818;
+    --danger-soft-foreground: #fca5a5;
+
+    --info: #60a5fa;
+    --info-soft: #18264a;
+    --info-soft-foreground: #bfdbfe;
+
+    --gradient-hero: linear-gradient(
+      135deg,
+      rgba(101, 133, 255, 0.22),
+      rgba(92, 208, 192, 0.22)
+    );
+    --gradient-brand: linear-gradient(135deg, #6585ff 0%, #5cd0c0 100%);
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
+    --shadow-md: 0 6px 16px -8px rgba(0, 0, 0, 0.6),
+      0 2px 4px -2px rgba(0, 0, 0, 0.45);
+    --shadow-lg: 0 24px 48px -24px rgba(0, 0, 0, 0.7),
+      0 4px 12px -6px rgba(0, 0, 0, 0.5);
+    --shadow-focus: 0 0 0 3px rgba(101, 133, 255, 0.45);
+
+    color-scheme: dark;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Tailwind v4 theme bindings (utility classes generated against vars)
+   --------------------------------------------------------------------------*/
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+
   --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
+  --color-foreground-muted: var(--foreground-muted);
+  --color-foreground-subtle: var(--foreground-subtle);
+
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
   --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-soft-foreground: var(--primary-soft-foreground);
+
   --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-soft-foreground: var(--accent-soft-foreground);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-soft-foreground: var(--success-soft-foreground);
+
   --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-soft-foreground: var(--warning-soft-foreground);
+
   --color-danger: var(--danger);
-  --font-sans: "Inter", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "SFMono-Regular", "Cascadia Code", "Roboto Mono", ui-monospace, monospace;
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-soft-foreground: var(--danger-soft-foreground);
+
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-info-soft-foreground: var(--info-soft-foreground);
+
+  /* backwards-compat aliases used elsewhere in the codebase */
+  --color-card: var(--surface);
+  --color-card-foreground: var(--foreground);
+  --color-muted: var(--surface-2);
+  --color-muted-foreground: var(--foreground-muted);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-2xl: var(--radius-2xl);
+  --radius-card: var(--radius-lg);
+
+  --font-sans: var(--font-sans), "Inter", "Segoe UI", ui-sans-serif, system-ui,
+    sans-serif;
+  --font-mono: var(--font-mono), "JetBrains Mono", "SFMono-Regular",
+    "Cascadia Code", ui-monospace, monospace;
 }
 
+/* ---------------------------------------------------------------------------
+   Base elements
+   --------------------------------------------------------------------------*/
 * {
   box-sizing: border-box;
 }
@@ -44,10 +273,113 @@ body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans);
+  font-family: var(--font-sans), "Inter", "Segoe UI", ui-sans-serif, system-ui,
+    sans-serif;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
 a {
   color: inherit;
   text-decoration: none;
+}
+
+/* Focus ring */
+:where(button, a, input, select, textarea, [role="button"], [role="switch"], [role="tab"]):focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+  border-radius: var(--radius-sm);
+}
+
+/* Skip link */
+.skip-link {
+  position: absolute;
+  left: 0.5rem;
+  top: 0.5rem;
+  z-index: 100;
+  transform: translateY(-200%);
+  background: var(--surface);
+  color: var(--foreground);
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  transition: transform 150ms ease;
+}
+
+.skip-link:focus,
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+/* ---------------------------------------------------------------------------
+   Utility classes
+   --------------------------------------------------------------------------*/
+.bg-gradient-hero {
+  background-image: var(--gradient-hero);
+}
+
+.bg-gradient-brand {
+  background-image: var(--gradient-brand);
+}
+
+@keyframes view-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-view-in {
+  animation: view-in 220ms ease-out both;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    var(--surface-2) 0%,
+    var(--surface-3) 50%,
+    var(--surface-2) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+/* Custom scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--foreground-subtle);
+  background-clip: padding-box;
 }

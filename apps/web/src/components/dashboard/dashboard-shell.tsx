@@ -1,20 +1,23 @@
 "use client";
 
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import {
   Activity,
   Ban,
   BookOpen,
   BriefcaseBusiness,
   CheckCircle2,
+  ChevronRight,
   ClipboardCheck,
   DatabaseZap,
   FileUser,
   Gauge,
+  Hash,
   HelpCircle,
   Info,
   ListChecks,
   LockKeyhole,
+  Menu,
   RefreshCcw,
   Search,
   ServerCog,
@@ -25,8 +28,12 @@ import {
   X
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { Pill } from "@/components/ui/pill";
+import { StatCard } from "@/components/ui/stat-card";
+import { Tooltip } from "@/components/ui/tooltip";
+import { Sidebar } from "@/components/dashboard/sidebar";
 import type { ApplicationItem, ApplicationSnapshot } from "@/lib/application-data";
 import type {
   ApprovalRequestItem,
@@ -258,6 +265,16 @@ export function DashboardShell({
   const [activeArea, setActiveArea] = useState<NavigationArea>("job-search");
   const [activeView, setActiveView] = useState<DashboardView>("job-overview");
   const [helpOpen, setHelpOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setSidebarOpen(false);
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [sidebarOpen]);
   const policySummary = getSourcePolicySummary(dashboardData.sourcePolicies);
   const pipelineTotal = getPipelineTotal(dashboardData.pipeline);
   const reviewTotal = reviewSnapshot.summary.needsReview;
@@ -271,119 +288,117 @@ export function DashboardShell({
   const isSystemView = activeView === "admin-system";
   const activeAreaMeta = navigationAreas.find((area) => area.value === activeArea);
 
+  function selectArea(area: NavigationArea) {
+    setActiveArea(area);
+    const firstView = navItems[area][0]?.view;
+    if (firstView) setActiveView(firstView);
+    setSidebarOpen(false);
+  }
+
+  function selectView(view: DashboardView) {
+    setActiveView(view);
+    setSidebarOpen(false);
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="grid min-h-screen lg:grid-cols-[248px_1fr]">
-        <aside className="border-b border-border bg-white lg:border-b-0 lg:border-r">
-          <div className="flex h-full flex-col gap-5 px-4 py-4">
-            <div className="flex items-center gap-3 px-2">
-              <div className="flex size-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                <ShieldCheck className="size-5" aria-hidden="true" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold">Jobfinder</p>
-                <p className="text-xs text-muted-foreground">Job search workspace</p>
-              </div>
-            </div>
+      <a href="#main" className="skip-link">Skip to content</a>
+      <div className="lg:grid lg:min-h-screen lg:grid-cols-[280px_1fr]">
+        <Sidebar
+          activeArea={activeArea}
+          activeView={activeView}
+          onSelectArea={selectArea}
+          onSelectView={selectView}
+          pendingApprovalCount={approvalSnapshot.summary.pending}
+          reviewsNeededCount={reviewTotal}
+          health={health}
+          chainValid={auditSnapshot.summary.chainValid}
+          open={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+        />
 
-            <div className="grid gap-2" aria-label="Workspace area">
-              {navigationAreas.map((area) => {
-                const Icon = area.icon;
-                const isActive = area.value === activeArea;
-                const firstView = navItems[area.value][0]?.view;
-
-                return (
-                  <button
-                    key={area.value}
-                    type="button"
-                    aria-pressed={isActive}
-                    onClick={() => {
-                      setActiveArea(area.value);
-                      setActiveView(firstView);
-                    }}
-                    className={cn(
-                      "flex min-h-12 w-full items-start gap-3 rounded-md border px-3 py-2 text-left",
-                      isActive
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-white text-foreground hover:bg-muted/70"
-                    )}
-                  >
-                    <Icon className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                    <span className="min-w-0">
-                      <span className="block text-sm font-semibold">{area.label}</span>
-                      <span
-                        className={cn(
-                          "mt-0.5 block text-xs leading-4",
-                          isActive ? "text-primary-foreground/80" : "text-muted-foreground"
-                        )}
-                      >
-                        {area.description}
-                      </span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <nav aria-label={`${activeAreaMeta?.label ?? "Workspace"} navigation`} className="grid gap-1">
-              <p className="px-3 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                {activeAreaMeta?.label}
-              </p>
-              {navItems[activeArea].map((item) => {
-                const Icon = item.icon;
-                const isActive = item.view === activeView;
-
-                return (
-                  <button
-                    key={item.label}
-                    type="button"
-                    aria-current={isActive ? "page" : undefined}
-                    onClick={() => setActiveView(item.view)}
-                    className={cn(
-                      "flex h-10 w-full items-center gap-3 rounded-md px-3 text-left text-sm font-medium text-muted-foreground",
-                      isActive && "bg-muted text-foreground",
-                      "hover:bg-muted/70 hover:text-foreground"
-                    )}
-                  >
-                    <Icon className="size-4" aria-hidden="true" />
-                    <span>{item.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
-            <div className="mt-auto hidden rounded-card border border-border bg-muted/60 p-3 text-xs text-muted-foreground lg:block">
-              <p className="font-medium text-foreground">Safe local mode</p>
-              <p className="mt-1 leading-5">
-                No crawling, LLM calls, browser automation, or submissions.
-              </p>
-            </div>
-          </div>
-        </aside>
-
-        <main className="min-w-0">
-          <header className="border-b border-border bg-white px-4 py-4 sm:px-6">
+        <main id="main" className="min-w-0">
+          <header className="sticky top-0 z-20 border-b border-border bg-surface/85 px-4 py-3 backdrop-blur-md sm:px-6">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                  {viewEyebrow(activeView)}
-                </p>
-                <h1 className="mt-1 text-2xl font-semibold tracking-normal text-foreground">
-                  {viewTitle(activeView)}
-                </h1>
+              <div className="flex min-w-0 items-center gap-3">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Open navigation"
+                  onClick={() => setSidebarOpen(true)}
+                  className="lg:hidden"
+                >
+                  <Menu className="size-4" aria-hidden="true" />
+                </Button>
+                <div className="min-w-0">
+                  <nav
+                    aria-label="Breadcrumb"
+                    className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.14em] text-foreground-subtle"
+                  >
+                    <span>{activeAreaMeta?.label ?? "Workspace"}</span>
+                    <ChevronRight className="size-3" aria-hidden="true" />
+                    <span className="text-foreground-muted">{viewTitle(activeView)}</span>
+                  </nav>
+                  <h1 className="mt-1 truncate text-2xl font-semibold tracking-tight text-foreground">
+                    {viewTitle(activeView)}
+                  </h1>
+                  <p className="mt-0.5 text-sm text-foreground-muted">{viewSubtitle(activeView)}</p>
+                </div>
               </div>
               <div className="relative flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  aria-expanded={helpOpen}
-                  aria-label={`Open help for ${viewTitle(activeView)}`}
-                  onClick={() => setHelpOpen((open) => !open)}
-                  className={cn(
-                    "inline-flex size-8 items-center justify-center rounded-md border border-border bg-white text-muted-foreground",
-                    "hover:bg-muted hover:text-foreground"
-                  )}
-                >
-                  <HelpCircle className="size-4" aria-hidden="true" />
-                </button>
+                <div className="relative hidden md:block">
+                  <Search
+                    className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-foreground-subtle"
+                    aria-hidden="true"
+                  />
+                  <input
+                    type="search"
+                    placeholder="Search workspace…"
+                    aria-label="Search workspace"
+                    className="h-9 w-56 rounded-md border border-border bg-surface-2 pl-8 pr-3 text-sm placeholder:text-foreground-subtle focus:bg-surface focus:outline-none"
+                  />
+                </div>
+                {activeArea === "administration" ? (
+                  <>
+                    <Badge tone="success" variant="soft">{policySummary.allowed} approved sources</Badge>
+                    <Badge
+                      tone={approvalSnapshot.summary.pending > 0 ? "warning" : "success"}
+                      variant="soft"
+                    >
+                      {approvalSnapshot.summary.pending} pending approvals
+                    </Badge>
+                    <Badge
+                      tone={auditSnapshot.summary.chainValid ? "success" : "danger"}
+                      variant="soft"
+                    >
+                      audit chain {auditSnapshot.summary.chainValid ? "valid" : "invalid"}
+                    </Badge>
+                  </>
+                ) : (
+                  <>
+                    <Badge tone="info" variant="soft">{pipelineTotal} jobs tracked</Badge>
+                    <Badge
+                      tone={reviewTotal > 0 ? "warning" : "success"}
+                      variant="soft"
+                    >
+                      {reviewTotal} reviews needed
+                    </Badge>
+                    <Badge tone="info" variant="soft">
+                      {applicationSnapshot.summary.total} applications
+                    </Badge>
+                  </>
+                )}
+                <Tooltip label={`Help for ${viewTitle(activeView)}`}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-expanded={helpOpen}
+                    aria-label={`Open help for ${viewTitle(activeView)}`}
+                    onClick={() => setHelpOpen((open) => !open)}
+                  >
+                    <HelpCircle className="size-4" aria-hidden="true" />
+                  </Button>
+                </Tooltip>
                 {helpOpen ? (
                   <ContextHelpPopover
                     areaLabel={activeAreaMeta?.label ?? "Workspace"}
@@ -392,71 +407,52 @@ export function DashboardShell({
                     onClose={() => setHelpOpen(false)}
                   />
                 ) : null}
-                {activeArea === "administration" ? (
-                  <>
-                    <Badge tone="success">{policySummary.allowed} approved sources</Badge>
-                    <Badge tone={approvalSnapshot.summary.pending > 0 ? "warning" : "success"}>
-                      {approvalSnapshot.summary.pending} pending approvals
-                    </Badge>
-                    <Badge tone={auditSnapshot.summary.chainValid ? "success" : "danger"}>
-                      audit chain {auditSnapshot.summary.chainValid ? "valid" : "invalid"}
-                    </Badge>
-                  </>
-                ) : (
-                  <>
-                    <Badge tone="info">{pipelineTotal} jobs tracked</Badge>
-                    <Badge tone={reviewTotal > 0 ? "warning" : "success"}>
-                      {reviewTotal} reviews needed
-                    </Badge>
-                    <Badge tone="info">
-                      {applicationSnapshot.summary.total} applications
-                    </Badge>
-                  </>
-                )}
               </div>
             </div>
           </header>
 
-          {isSourcesView ? (
-            <SourcesWorkspace policies={dashboardData.sourcePolicies} health={health} />
-          ) : isProfileView ? (
-            <CandidateWorkspace snapshot={candidateSnapshot} health={health} />
-          ) : isJobsView ? (
-            <JobsWorkspace snapshot={jobSnapshot} health={health} />
-          ) : isReviewView ? (
-            <ReviewWorkspace
-              reviewSnapshot={reviewSnapshot}
-              approvalSnapshot={approvalSnapshot}
-              health={health}
-            />
-          ) : isApplicationsView ? (
-            <ApplicationsWorkspace snapshot={applicationSnapshot} health={health} />
-          ) : isApprovalsView ? (
-            <ApprovalsWorkspace
-              reviewSnapshot={reviewSnapshot}
-              approvalSnapshot={approvalSnapshot}
-              health={health}
-            />
-          ) : isAuditView ? (
-            <AuditWorkspace snapshot={auditSnapshot} health={health} />
-          ) : isSystemView ? (
-            <SystemStatusWorkspace
-              settingsSnapshot={settingsSnapshot}
-              auditSnapshot={auditSnapshot}
-              health={health}
-            />
-          ) : (
-            <JobSearchOverview
-              health={health}
-              candidateSnapshot={candidateSnapshot}
-              jobSnapshot={jobSnapshot}
-              reviewSnapshot={reviewSnapshot}
-              approvalSnapshot={approvalSnapshot}
-              applicationSnapshot={applicationSnapshot}
-              auditSnapshot={auditSnapshot}
-              settingsSnapshot={settingsSnapshot}
-            />
-          )}
+          <div key={activeView} className="animate-view-in">
+            {isSourcesView ? (
+              <SourcesWorkspace policies={dashboardData.sourcePolicies} health={health} />
+            ) : isProfileView ? (
+              <CandidateWorkspace snapshot={candidateSnapshot} health={health} />
+            ) : isJobsView ? (
+              <JobsWorkspace snapshot={jobSnapshot} health={health} />
+            ) : isReviewView ? (
+              <ReviewWorkspace
+                reviewSnapshot={reviewSnapshot}
+                approvalSnapshot={approvalSnapshot}
+                health={health}
+              />
+            ) : isApplicationsView ? (
+              <ApplicationsWorkspace snapshot={applicationSnapshot} health={health} />
+            ) : isApprovalsView ? (
+              <ApprovalsWorkspace
+                reviewSnapshot={reviewSnapshot}
+                approvalSnapshot={approvalSnapshot}
+                health={health}
+              />
+            ) : isAuditView ? (
+              <AuditWorkspace snapshot={auditSnapshot} health={health} />
+            ) : isSystemView ? (
+              <SystemStatusWorkspace
+                settingsSnapshot={settingsSnapshot}
+                auditSnapshot={auditSnapshot}
+                health={health}
+              />
+            ) : (
+              <JobSearchOverview
+                health={health}
+                candidateSnapshot={candidateSnapshot}
+                jobSnapshot={jobSnapshot}
+                reviewSnapshot={reviewSnapshot}
+                approvalSnapshot={approvalSnapshot}
+                applicationSnapshot={applicationSnapshot}
+                auditSnapshot={auditSnapshot}
+                settingsSnapshot={settingsSnapshot}
+              />
+            )}
+          </div>
         </main>
       </div>
     </div>
@@ -482,43 +478,86 @@ function JobSearchOverview({
   auditSnapshot: AuditSnapshot;
   settingsSnapshot: SettingsSnapshot;
 }) {
+  const reviewsPending = reviewSnapshot.summary.needsReview;
+  const approvalsPending = approvalSnapshot.summary.pending;
+  const jobsReady = jobSnapshot.summary.ready;
+  const appsTotal = applicationSnapshot.summary.total;
   return (
-    <div className="grid gap-4 p-4 sm:p-6 xl:grid-cols-[1.5fr_1fr]">
-      <section className="grid gap-4">
-        <SafeLocalModeIntro />
-        <NextActionPanel
-          jobSnapshot={jobSnapshot}
-          reviewSnapshot={reviewSnapshot}
-          approvalSnapshot={approvalSnapshot}
-          applicationSnapshot={applicationSnapshot}
+    <div className="grid gap-6 p-4 sm:p-6">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          label="Jobs ready"
+          tone="success"
+          icon={BriefcaseBusiness}
+          value={jobsReady}
+          description={`${jobSnapshot.summary.total} synthetic matches scanned`}
         />
-        <CandidateProfilePanel snapshot={candidateSnapshot} />
-        <JobsPreviewPanel snapshot={jobSnapshot} />
-        <PipelinePanel />
-        <ApplicationTrackerPreview snapshot={applicationSnapshot} />
-      </section>
-      <section className="grid content-start gap-4">
-        <HealthPanel health={health} />
-        <ReviewQueuePanel items={reviewSnapshot.buckets} />
-        <ApprovalSummaryPanel snapshot={approvalSnapshot} />
-        <SafeModePanel
-          source={settingsSnapshot.source}
-          chainValid={auditSnapshot.summary.chainValid}
+        <StatCard
+          label="Reviews pending"
+          tone={reviewsPending > 0 ? "warning" : "success"}
+          icon={ClipboardCheck}
+          value={reviewsPending}
+          description="Human checks before forward motion"
+          trend={{
+            direction: reviewsPending > 0 ? "up" : "flat",
+            label: reviewsPending > 0 ? "needs attention" : "all clear"
+          }}
         />
-        <GuardrailPanel />
-      </section>
+        <StatCard
+          label="Approvals open"
+          tone={approvalsPending > 0 ? "warning" : "success"}
+          icon={ShieldCheck}
+          value={approvalsPending}
+          description={`${approvalSnapshot.summary.needsChanges} need changes`}
+        />
+        <StatCard
+          label="Applications"
+          tone="primary"
+          icon={ListChecks}
+          value={appsTotal}
+          description={`${applicationSnapshot.summary.submitted} submitted · ${applicationSnapshot.summary.approved} approved`}
+        />
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
+        <section className="grid gap-4">
+          <SafeLocalModeIntro />
+          <NextActionPanel
+            jobSnapshot={jobSnapshot}
+            reviewSnapshot={reviewSnapshot}
+            approvalSnapshot={approvalSnapshot}
+            applicationSnapshot={applicationSnapshot}
+          />
+          <PipelinePanel />
+          <JobsPreviewPanel snapshot={jobSnapshot} />
+          <ApplicationTrackerPreview snapshot={applicationSnapshot} />
+        </section>
+        <section className="grid content-start gap-4">
+          <HealthPanel health={health} />
+          <ReviewQueuePanel items={reviewSnapshot.buckets} />
+          <ApprovalSummaryPanel snapshot={approvalSnapshot} />
+          <SafeModePanel
+            source={settingsSnapshot.source}
+            chainValid={auditSnapshot.summary.chainValid}
+          />
+          <GuardrailPanel />
+          <CandidateProfilePanel snapshot={candidateSnapshot} />
+        </section>
+      </div>
     </div>
   );
 }
 
 function SafeLocalModeIntro() {
   return (
-    <Card className="border-blue-200 bg-blue-50/70">
+    <Card variant="gradient" className="relative">
       <CardContent className="flex items-start gap-3">
-        <ShieldCheck className="mt-0.5 size-5 shrink-0 text-blue-700" aria-hidden="true" />
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-gradient-brand text-white shadow-md">
+          <ShieldCheck className="size-5" aria-hidden="true" />
+        </div>
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-blue-950">Safe local mode</p>
-          <p className="mt-1 text-sm leading-5 text-blue-900">
+          <p className="text-sm font-semibold text-foreground">Safe local mode</p>
+          <p className="mt-1 text-sm leading-5 text-foreground-muted">
             Review synthetic job matches, profile evidence, application status, and approval
             gates. Jobfinder will not crawl sites, call an LLM, automate a browser, autofill forms,
             or submit applications in this phase.
@@ -1096,26 +1135,45 @@ function PolicyCheckPanel({ policies }: { policies: readonly SourcePolicy[] }) {
 }
 
 function PipelinePanel() {
+  const total = getPipelineTotal(dashboardData.pipeline) || 1;
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Application Progress</CardTitle>
+      <CardHeader className="flex items-center justify-between gap-3">
+        <div>
+          <CardTitle>Application progress</CardTitle>
+          <p className="mt-0.5 text-xs text-foreground-muted">
+            Distribution across pipeline stages.
+          </p>
+        </div>
+        <Badge tone="info" variant="soft">{getPipelineTotal(dashboardData.pipeline)} tracked</Badge>
       </CardHeader>
       <CardContent>
         <div className="grid gap-3 md:grid-cols-5">
-          {dashboardData.pipeline.map((column) => (
-            <div
-              key={column.label}
-              className="min-h-36 rounded-card border border-border bg-muted/40 p-3"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="text-sm font-semibold">{column.label}</h3>
-                <span className="font-mono text-xl font-semibold">{column.count}</span>
+          {dashboardData.pipeline.map((column) => {
+            const pct = Math.max(2, Math.round((column.count / total) * 100));
+            return (
+              <div
+                key={column.label}
+                className="group relative min-h-36 rounded-card border border-border bg-surface-2/60 p-3 transition hover:-translate-y-0.5 hover:border-border-strong hover:shadow-sm"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground-muted">
+                    {column.label}
+                  </h3>
+                  <span className="rounded-full bg-surface-3 px-2 py-0.5 text-xs font-semibold tabular-nums">
+                    {column.count}
+                  </span>
+                </div>
+                <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-surface-3">
+                  <div
+                    className="h-full rounded-full bg-gradient-brand transition-[width] duration-500 ease-out"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+                <p className="mt-3 text-xs leading-5 text-foreground-muted">{column.description}</p>
               </div>
-              <Separator className="my-3" />
-              <p className="text-xs leading-5 text-muted-foreground">{column.description}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </CardContent>
     </Card>
@@ -1424,6 +1482,23 @@ function AuditSummaryPanel({ snapshot }: { snapshot: AuditSnapshot }) {
   );
 }
 
+function HashChip({ value, muted = false }: { value: string; muted?: boolean }) {
+  const short =
+    value.length > 16 ? `${value.slice(0, 8)}…${value.slice(-6)}` : value;
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-md border border-border px-1.5 py-0.5 font-mono text-[11px]",
+        muted ? "bg-surface-2/60 text-foreground-subtle" : "bg-surface-2 text-foreground-muted"
+      )}
+      title={value}
+    >
+      <Hash className="size-3" aria-hidden="true" />
+      {short}
+    </span>
+  );
+}
+
 function AuditEventTable({ events }: { events: readonly AuditEventItem[] }) {
   return (
     <Card>
@@ -1445,7 +1520,7 @@ function AuditEventTable({ events }: { events: readonly AuditEventItem[] }) {
           </thead>
           <tbody>
             {events.map((event) => (
-              <tr key={event.id}>
+              <tr key={event.id} className="even:bg-surface-2/40 transition-colors hover:bg-surface-2">
                 <td className="border-b border-border px-4 py-3 align-top">
                   <p className="font-medium">{event.eventType}</p>
                   <p className="mt-1 font-mono text-xs text-muted-foreground">{event.id}</p>
@@ -1463,12 +1538,15 @@ function AuditEventTable({ events }: { events: readonly AuditEventItem[] }) {
                   {summarizePayload(event.payload)}
                 </td>
                 <td className="border-b border-border px-4 py-3 align-top">
-                  <p className="max-w-[220px] truncate font-mono text-xs text-muted-foreground">
-                    {event.eventHash}
-                  </p>
-                  <p className="mt-1 max-w-[220px] truncate font-mono text-xs text-muted-foreground">
-                    prev {event.previousHash ?? "genesis"}
-                  </p>
+                  <HashChip value={event.eventHash} />
+                  <div className="mt-1.5 flex items-center gap-1.5">
+                    <span className="text-[10px] uppercase tracking-wider text-foreground-subtle">prev</span>
+                    {event.previousHash ? (
+                      <HashChip value={event.previousHash} muted />
+                    ) : (
+                      <Badge tone="neutral" variant="outline" size="sm">genesis</Badge>
+                    )}
+                  </div>
                 </td>
                 <td className="border-b border-border px-4 py-3 text-right align-top font-mono text-xs text-muted-foreground">
                   {formatTimestamp(event.createdAt)}
@@ -1482,23 +1560,36 @@ function AuditEventTable({ events }: { events: readonly AuditEventItem[] }) {
   );
 }
 
+const approvalRailClasses: Record<ApprovalRequestStatus, string> = {
+  pending: "bg-warning",
+  approved: "bg-success",
+  needs_changes: "bg-info",
+  rejected: "bg-danger"
+};
+
 function ApprovalRequestRow({ request }: { request: ApprovalRequestItem }) {
+  const rail = approvalRailClasses[request.status] ?? "bg-border-strong";
   return (
-    <div className="rounded-md border border-border px-3 py-3">
+    <div className="relative rounded-card border border-border bg-surface px-4 py-3 pl-5 transition-colors hover:border-border-strong">
+      <span className={cn("absolute inset-y-3 left-1.5 w-0.5 rounded-full", rail)} aria-hidden="true" />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium">{formatRequestType(request.requestType)}</p>
-          <p className="mt-1 font-mono text-xs text-muted-foreground">{request.jobPostingId}</p>
+          <p className="truncate text-sm font-semibold">{formatRequestType(request.requestType)}</p>
+          <p className="mt-1 font-mono text-xs text-foreground-muted">{request.jobPostingId}</p>
         </div>
         <ApprovalStatusBadge status={request.status} />
       </div>
-      <p className="mt-3 text-sm leading-5 text-muted-foreground">{request.reason}</p>
+      <p className="mt-3 text-sm leading-5 text-foreground-muted">{request.reason}</p>
       {request.decisionReason ? (
-        <p className="mt-2 text-xs leading-5 text-muted-foreground">{request.decisionReason}</p>
+        <p className="mt-2 rounded-md bg-surface-2 px-3 py-2 text-xs leading-5 text-foreground-muted">
+          {request.decisionReason}
+        </p>
       ) : null}
       <div className="mt-3 flex flex-wrap gap-2">
-        <Badge tone="neutral">{request.sideEffect}</Badge>
-        {request.synthetic ? <Badge tone="info">synthetic</Badge> : null}
+        <Badge tone="neutral" size="sm">{request.sideEffect}</Badge>
+        {request.synthetic ? (
+          <Badge tone="primary" variant="outline" size="sm">synthetic</Badge>
+        ) : null}
       </div>
     </div>
   );
@@ -1506,9 +1597,9 @@ function ApprovalRequestRow({ request }: { request: ApprovalRequestItem }) {
 
 function MetricTile({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-md border border-border bg-muted/40 px-3 py-2">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 font-mono text-xl font-semibold">{value}</p>
+    <div className="rounded-md border border-border bg-surface-2/60 px-3 py-2">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground-muted">{label}</p>
+      <p className="mt-1 font-mono text-xl font-semibold tabular-nums">{value}</p>
     </div>
   );
 }
@@ -1763,33 +1854,42 @@ function ReviewQueueTable({ items }: { items: readonly ReviewJobItem[] }) {
 
 function HealthPanel({ health }: { health: ApiHealthStatus }) {
   const Icon = health.state === "healthy" ? CheckCircle2 : TriangleAlert;
-  const tone = health.state === "healthy" ? "success" : health.state === "unconfigured" ? "warning" : "danger";
+  const tone =
+    health.state === "healthy"
+      ? "success"
+      : health.state === "unconfigured"
+        ? "warning"
+        : "danger";
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Health / API Status</CardTitle>
+      <CardHeader className="flex items-center justify-between gap-3">
+        <CardTitle>API health</CardTitle>
+        <Pill tone={tone} pulse={tone !== "success"}>{health.state}</Pill>
       </CardHeader>
       <CardContent className="grid gap-4">
         <div className="flex items-start gap-3">
           <div
             className={cn(
               "flex size-10 shrink-0 items-center justify-center rounded-md",
-              health.state === "healthy" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"
+              tone === "success"
+                ? "bg-success-soft text-success-soft-foreground"
+                : tone === "warning"
+                  ? "bg-warning-soft text-warning-soft-foreground"
+                  : "bg-danger-soft text-danger-soft-foreground"
             )}
           >
             <Icon className="size-5" aria-hidden="true" />
           </div>
           <div className="min-w-0">
-            <Badge tone={tone}>{health.state}</Badge>
-            <p className="mt-2 text-sm font-semibold">{health.label}</p>
-            <p className="mt-1 text-sm leading-5 text-muted-foreground">{health.detail}</p>
+            <p className="text-sm font-semibold">{health.label}</p>
+            <p className="mt-1 text-sm leading-5 text-foreground-muted">{health.detail}</p>
           </div>
         </div>
         {health.checkedUrl ? (
-          <p className="break-words rounded-md bg-muted px-3 py-2 font-mono text-xs text-muted-foreground">
+          <code className="block break-words rounded-md bg-surface-2 px-3 py-2 font-mono text-xs text-foreground-muted">
             {health.checkedUrl}
-          </p>
+          </code>
         ) : null}
       </CardContent>
     </Card>
@@ -1948,42 +2048,6 @@ function GuardrailRow({
   );
 }
 
-function viewEyebrow(view: DashboardView) {
-  if (view === "profile") {
-    return "Job search";
-  }
-
-  if (view === "admin-sources") {
-    return "Administration";
-  }
-
-  if (view === "jobs") {
-    return "Job search";
-  }
-
-  if (view === "reviews-needed") {
-    return "Job search";
-  }
-
-  if (view === "applications") {
-    return "Job search";
-  }
-
-  if (view === "admin-approvals") {
-    return "Administration";
-  }
-
-  if (view === "admin-audit") {
-    return "Administration";
-  }
-
-  if (view === "admin-system") {
-    return "Administration";
-  }
-
-  return "Job search";
-}
-
 function viewTitle(view: DashboardView) {
   if (view === "profile") {
     return "Profile and preferences";
@@ -2018,6 +2082,29 @@ function viewTitle(view: DashboardView) {
   }
 
   return "Job search overview";
+}
+
+function viewSubtitle(view: DashboardView) {
+  switch (view) {
+    case "profile":
+      return "Profile, evidence, and job preferences for synthetic matching.";
+    case "jobs":
+      return "Synthetic job catalog with source, skills, and review status.";
+    case "applications":
+      return "Read-only application tracker with safety guardrails.";
+    case "reviews-needed":
+      return "Items blocked by policy, confidence, or evidence checks.";
+    case "admin-sources":
+      return "Source registry posture and action-scoped policy decisions.";
+    case "admin-approvals":
+      return "Manual approval requests and gated operator decisions.";
+    case "admin-audit":
+      return "Hash-chained audit events for material decisions.";
+    case "admin-system":
+      return "Runtime health, capability gates, and chain integrity.";
+    default:
+      return "Synthetic match summary, profile evidence, and applications.";
+  }
 }
 
 function SkillList({ skills }: { skills: readonly string[] }) {

@@ -1,14 +1,5 @@
 import type { Config } from "tailwindcss";
 
-const config: Config = {
-  content: ["./src/**/*.{ts,tsx}"],
-  theme: {
-    extend: {
-      borderRadius: {
-        card: "8px"
-      }
-    }
-  }
-};
+const config: Config = { content: ["./src/**/*.{ts,tsx}"] };
 
 export default config;
