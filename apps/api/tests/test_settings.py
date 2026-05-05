@@ -29,6 +29,12 @@ def test_settings_accept_common_database_and_redis_env_names(monkeypatch: Monkey
     assert settings.redis_url == "redis://redis:6379/2"
 
 
+def test_settings_normalize_postgresql_url_to_installed_driver() -> None:
+    settings = Settings(database_url="postgresql://user:pass@db:5432/app")
+
+    assert settings.database_url == "postgresql+psycopg://user:pass@db:5432/app"
+
+
 def test_production_write_api_requires_explicit_opt_in() -> None:
     production_settings = Settings(environment="production")
     enabled_settings = Settings(environment="production", write_api_enabled=True)

@@ -68,7 +68,6 @@ WRITE_GATED_ROUTES = {
     "/candidate/evidence",
     "/candidate/profile",
     "/candidate/search-criteria",
-    "/source-policies/check",
     "/source-policies/seed-known",
     "/sources",
 }

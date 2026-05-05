@@ -136,7 +136,9 @@ def test_untrusted_origin_does_not_receive_cors_allow_origin(
     assert "access-control-allow-origin" not in response.headers
 
 
-def test_production_write_guard_blocks_policy_mutation_without_opt_in(tmp_path: Path) -> None:
+def test_production_allows_audited_policy_decision_without_write_api_opt_in(
+    tmp_path: Path,
+) -> None:
     database_url = f"sqlite+pysqlite:///{tmp_path / 'production-api.db'}"
     engine = get_engine(database_url)
     Base.metadata.create_all(engine)
@@ -158,5 +160,32 @@ def test_production_write_guard_blocks_policy_mutation_without_opt_in(tmp_path: 
     assert health_response.status_code == 200
     assert health_response.headers["x-content-type-options"] == "nosniff"
     assert health_response.headers["referrer-policy"] == "no-referrer"
-    assert policy_response.status_code == 403
-    assert "Write API is disabled in production" in policy_response.json()["detail"]
+    assert policy_response.status_code == 200
+    assert policy_response.json()["allowed"] is False
+
+    with Session(engine) as session:
+        events = session.scalars(select(AuditEvent)).all()
+
+    assert len(events) == 1
+    assert events[0].event_type == "source_policy.decision"
+
+
+def test_production_write_guard_blocks_policy_seed_mutation_without_opt_in(
+    tmp_path: Path,
+) -> None:
+    database_url = f"sqlite+pysqlite:///{tmp_path / 'production-seed-api.db'}"
+    engine = get_engine(database_url)
+    Base.metadata.create_all(engine)
+    app = create_app(
+        Settings(
+            database_url=database_url,
+            service_name="jobfinder-api",
+            environment="production",
+        )
+    )
+
+    with TestClient(app) as client:
+        seed_response = client.post("/source-policies/seed-known")
+
+    assert seed_response.status_code == 403
+    assert "Write API is disabled in production" in seed_response.json()["detail"]
