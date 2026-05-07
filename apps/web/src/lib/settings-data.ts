@@ -3,6 +3,8 @@ export type RuntimeCapabilityKey =
   | "source_policy_gate"
   | "audit_hash_chain"
   | "single_user_local_mode"
+  | "operator_api_key"
+  | "write_api"
   | "live_crawling"
   | "live_discovery"
   | "live_search_discovery"
@@ -134,6 +136,19 @@ function localSettingsSnapshot(detail: string, checkedUrl?: string): SettingsSna
           label: "Single-user local mode",
           enabled: true,
           detail: "Local owner fields are present, but no external auth provider is active."
+        },
+        {
+          key: "operator_api_key",
+          label: "Operator API key",
+          enabled: false,
+          detail: "Not configured; production mutation endpoints remain unavailable."
+        },
+        {
+          key: "write_api",
+          label: "Write API",
+          enabled: true,
+          detail:
+            "Local write endpoints are available; production requires explicit operator controls."
         },
         {
           key: "live_crawling",

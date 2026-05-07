@@ -4,11 +4,13 @@ This roadmap brings live automation capabilities into scope in the order they ca
 
 ## Phase A: Live Intake
 
-Current phase. Operators submit one approved HTTPS job URL. The API checks `discover` and `extract`, fetches within strict limits, extracts deterministic job data, and routes results to review. No broad crawling, login, LLM, browser automation, autofill, or submit behavior is included.
+Implemented. Operators submit one approved HTTPS job URL through the local operator command. The API requires the production operator key, checks `discover` and `extract`, fetches within strict limits, extracts deterministic job data, and routes results to review. No broad crawling, login, LLM, browser automation, autofill, or submit behavior is included.
 
 ## Phase B: Approved Search-Result Discovery
 
-Add queued discovery for approved sources only. Requirements: per-source allowlist, robots/terms evidence, crawl budgets, rate limits, retry/backoff limits, dedupe, audit correlation, and review dashboards. Prohibited platforms and unknown sources stay blocked.
+Initial implementation: operators can submit one approved HTTPS search-result page through the local operator command. The API requires the production operator key, applies the same source-policy checks, keeps discovery same-domain, enforces a result budget, and records auditable run metadata. Prohibited platforms and unknown sources stay blocked.
+
+Next controls before queued crawling: durable job queue, per-source rate limits, retry/backoff limits, robots/terms evidence refresh, dedupe across runs, and dashboard review for discovered URLs.
 
 ## Phase C: Candidate Vault And Evidence Controls
 

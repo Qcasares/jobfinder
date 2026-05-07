@@ -59,7 +59,7 @@ import {
 } from "@/lib/dashboard-data";
 import { cn } from "@/lib/utils";
 import type { ReviewJobItem, ReviewQueueSnapshot } from "@/lib/review-data";
-import type { RuntimeCapability, SettingsSnapshot } from "@/lib/settings-data";
+import type { RuntimeCapability, RuntimeSettings, SettingsSnapshot } from "@/lib/settings-data";
 
 type DashboardView =
   | "job-overview"
@@ -789,7 +789,7 @@ function SystemStatusWorkspace({
   return (
     <div className="grid gap-4 p-4 sm:p-6 xl:grid-cols-[1.55fr_0.95fr]">
       <section className="grid gap-4">
-        <LiveIntakePanel capabilities={settingsSnapshot.runtime.capabilities} />
+        <LiveIntakePanel runtime={settingsSnapshot.runtime} />
         <RuntimeCapabilityPanel capabilities={settingsSnapshot.runtime.capabilities} />
         <RuntimeSettingsPanel snapshot={settingsSnapshot} />
       </section>
@@ -1660,12 +1660,15 @@ function ApplicationTable({ applications }: { applications: readonly Application
 }
 
 function LiveIntakePanel({
-  capabilities
+  runtime
 }: {
-  capabilities: readonly RuntimeCapability[];
+  runtime: RuntimeSettings;
 }) {
+  const capabilities = runtime.capabilities;
   const liveDiscoveryEnabled = isCapabilityEnabled(capabilities, "live_discovery");
   const liveSearchEnabled = isCapabilityEnabled(capabilities, "live_search_discovery");
+  const productionMode = runtime.environment === "production";
+  const operatorKeyConfigured = isCapabilityEnabled(capabilities, "operator_api_key");
   const [mode, setMode] = useState<"job" | "search">("job");
   const [url, setUrl] = useState("");
   const [sourceDomain, setSourceDomain] = useState("");
@@ -1674,9 +1677,15 @@ function LiveIntakePanel({
   const [run, setRun] = useState<LiveDiscoveryRun | null>(null);
   const [error, setError] = useState<string | null>(null);
   const activeEnabled = mode === "job" ? liveDiscoveryEnabled : liveSearchEnabled;
+  const command = formatLiveIntakeCommand({ maxResults, mode, sourceDomain, url });
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (productionMode) {
+      setRun(null);
+      setError("Use the local operator command for production live intake.");
+      return;
+    }
     setIsSubmitting(true);
     setError(null);
     setRun(null);
@@ -1707,8 +1716,8 @@ function LiveIntakePanel({
         <div>
           <CardTitle>Live Intake</CardTitle>
           <p className="mt-1 text-sm text-muted-foreground">
-            Submit one approved HTTPS page, or discover same-domain job links from an approved
-            search page.
+            Production live intake is run through the local operator command so the operator key
+            never enters the browser.
           </p>
         </div>
         <Badge tone={activeEnabled ? "success" : "neutral"}>
@@ -1780,7 +1789,7 @@ function LiveIntakePanel({
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || productionMode}
               className={cn(
                 "inline-flex h-10 items-center gap-2 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground",
                 "disabled:cursor-not-allowed disabled:opacity-60"
@@ -1791,13 +1800,26 @@ function LiveIntakePanel({
               ) : (
                 <Search className="size-4" aria-hidden="true" />
               )}
-              Run intake
+              {productionMode ? "Use local command" : "Run intake"}
             </button>
             <Badge tone={activeEnabled ? "success" : "warning"}>
               {activeEnabled ? "policy gated" : "runtime flag off"}
             </Badge>
+            {productionMode ? (
+              <Badge tone={operatorKeyConfigured ? "success" : "warning"}>
+                {operatorKeyConfigured ? "operator key configured" : "operator key missing"}
+              </Badge>
+            ) : null}
           </div>
         </form>
+        {productionMode ? (
+          <div className="mt-4 rounded-md border border-border bg-muted/40 p-3">
+            <p className="text-sm font-medium text-foreground">Local command</p>
+            <pre className="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-white p-3 font-mono text-xs text-muted-foreground">
+              {command}
+            </pre>
+          </div>
+        ) : null}
         {error ? (
           <p className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">
             {error}
@@ -1807,6 +1829,35 @@ function LiveIntakePanel({
       </CardContent>
     </Card>
   );
+}
+
+function formatLiveIntakeCommand({
+  maxResults,
+  mode,
+  sourceDomain,
+  url
+}: {
+  maxResults: number;
+  mode: "job" | "search";
+  sourceDomain: string;
+  url: string;
+}) {
+  const args = ["pnpm operator:live-intake --"];
+  if (mode === "search") {
+    args.push("--search");
+  }
+  args.push("--url", shellArg(url || "https://careers.example.test/jobs/platform"));
+  if (sourceDomain.trim()) {
+    args.push("--source-domain", shellArg(sourceDomain.trim()));
+  }
+  if (mode === "search") {
+    args.push("--max-results", String(maxResults));
+  }
+  return args.join(" ");
+}
+
+function shellArg(value: string) {
+  return `'${value.replaceAll("'", "'\\''")}'`;
 }
 
 function LiveIntakeResult({ run }: { run: LiveDiscoveryRun }) {

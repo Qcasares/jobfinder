@@ -44,6 +44,8 @@ Production API: `https://api.jobfinder.quentincasares.com`.
 
 Use `docs/vercel-deployment.md` for the Vercel production runbook. Deploy the FastAPI API and Next.js web dashboard as separate Vercel projects from this monorepo, and run database migrations explicitly before promoting the API.
 
+Use `docs/operator-runbook.md` for production live-intake commands. Operator keys stay in local ignored env files or Vercel secrets, never in browser-visible configuration.
+
 ## Guardrails
 
 Unknown sources deny every action until reviewed. Audit events are append-only through the service layer and hash-chained for tamper evidence. Production mutation endpoints require an operator API key until a full auth provider exists. Live discovery is bounded to approved HTTPS sources, drafting requires evidence-backed review packets, autofill is dry-run preview data only, and final-review packets stop before external side effects. Use only synthetic fixtures and sanitized examples in this repository.
