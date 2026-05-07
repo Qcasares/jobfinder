@@ -34,6 +34,7 @@ def test_runtime_settings_expose_safe_posture_without_secret_values() -> None:
         "write_api",
     }
     assert {capability.key for capability in runtime.capabilities if not capability.enabled} >= {
+        "operator_api_key",
         "live_crawling",
         "live_discovery",
         "live_search_discovery",
@@ -65,6 +66,22 @@ def test_runtime_settings_can_expose_explicit_live_discovery_opt_in() -> None:
     assert "explicitly enabled" in live_discovery.detail
     assert live_search_discovery.enabled is True
     assert "explicitly enabled" in live_search_discovery.detail
+
+
+def test_runtime_settings_can_expose_operator_key_configuration() -> None:
+    settings = Settings(environment="production", operator_api_key="operator-secret")
+
+    runtime = RuntimeSettingsService(settings).get_status()
+
+    operator_key = next(
+        capability
+        for capability in runtime.capabilities
+        if capability.key == "operator_api_key"
+    )
+    assert runtime.secrets_loaded is True
+    assert operator_key.enabled is True
+    assert "operator-secret" not in operator_key.detail
+    assert "Configured" in operator_key.detail
 
 
 def test_runtime_settings_can_expose_candidate_vault_opt_in() -> None:

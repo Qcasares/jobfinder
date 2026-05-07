@@ -15,6 +15,10 @@ class Settings(BaseSettings):
         default="redis://localhost:6379/0",
         validation_alias=AliasChoices("JOBFINDER_API_REDIS_URL", "REDIS_URL"),
     )
+    operator_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("JOBFINDER_API_OPERATOR_API_KEY", "OPERATOR_API_KEY"),
+    )
     audit_schema_version: int = Field(default=1, ge=1)
     write_api_enabled: bool = Field(default=False)
     live_discovery_enabled: bool = Field(default=False)
@@ -53,6 +57,14 @@ class Settings(BaseSettings):
     @property
     def production_writes_allowed(self) -> bool:
         return self.environment != "production" or self.write_api_enabled
+
+    @property
+    def production_operator_auth_required(self) -> bool:
+        return self.environment == "production"
+
+    @property
+    def operator_auth_configured(self) -> bool:
+        return bool(self.operator_api_key)
 
 
 @lru_cache

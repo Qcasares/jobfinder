@@ -1,7 +1,8 @@
 from collections.abc import Awaitable, Callable, Iterator
+from secrets import compare_digest
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import Engine
@@ -88,6 +89,39 @@ WRITE_GATED_ROUTES = {
     "/sources",
 }
 
+OPERATOR_GATED_ROUTES = WRITE_GATED_ROUTES | {
+    "/autofill/packets",
+    "/drafting/runs",
+    "/final-review/packets",
+    "/live-discovery/runs",
+    "/live-discovery/search-runs",
+}
+
+OPERATOR_KEY_HEADER = "x-jobfinder-operator-key"
+OPERATOR_KEY_NOT_CONFIGURED_DETAIL = "Operator API key is not configured."
+OPERATOR_KEY_REQUIRED_DETAIL = "A valid operator API key is required."
+
+
+def _is_operator_gated_request(request: Request) -> bool:
+    if request.method not in {"POST", "PUT", "PATCH", "DELETE"}:
+        return False
+    if request.url.path in OPERATOR_GATED_ROUTES:
+        return True
+    return request.url.path.startswith("/approvals/requests/") and request.url.path.endswith(
+        "/decision"
+    )
+
+
+def _operator_key_allowed(request: Request, settings: Settings) -> tuple[bool, str | None]:
+    if not settings.production_operator_auth_required or not _is_operator_gated_request(request):
+        return True, None
+    if not settings.operator_api_key:
+        return False, OPERATOR_KEY_NOT_CONFIGURED_DETAIL
+    supplied_key = request.headers.get(OPERATOR_KEY_HEADER, "")
+    if compare_digest(supplied_key, settings.operator_api_key):
+        return True, None
+    return False, OPERATOR_KEY_REQUIRED_DETAIL
+
 
 def create_app(
     settings: Settings | None = None,
@@ -118,6 +152,22 @@ def create_app(
         return response
 
     @app.middleware("http")
+    async def production_operator_auth_guard(
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]],
+    ) -> Response:
+        allowed, detail = _operator_key_allowed(request, resolved_settings)
+        if not allowed:
+            status_code = (
+                status.HTTP_503_SERVICE_UNAVAILABLE
+                if detail == OPERATOR_KEY_NOT_CONFIGURED_DETAIL
+                else status.HTTP_401_UNAUTHORIZED
+            )
+            return JSONResponse(status_code=status_code, content={"detail": detail})
+        response = await call_next(request)
+        return response
+
+    @app.middleware("http")
     async def production_write_guard(
         request: Request,
         call_next: Callable[[Request], Awaitable[Response]],
@@ -139,7 +189,7 @@ def create_app(
             CORSMiddleware,
             allow_origins=resolved_settings.cors_allowed_origins,
             allow_methods=["GET", "POST"],
-            allow_headers=["content-type"],
+            allow_headers=["content-type", OPERATOR_KEY_HEADER],
             allow_credentials=False,
         )
     if settings is not None:

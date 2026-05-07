@@ -8,6 +8,7 @@ RuntimeCapabilityKey = Literal[
     "source_policy_gate",
     "audit_hash_chain",
     "single_user_local_mode",
+    "operator_api_key",
     "write_api",
     "live_crawling",
     "live_discovery",

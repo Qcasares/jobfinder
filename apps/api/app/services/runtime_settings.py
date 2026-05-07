@@ -15,7 +15,7 @@ class RuntimeSettingsService:
             audit_schema_version=self._settings.audit_schema_version,
             database_configured=bool(self._settings.database_url.strip()),
             redis_configured=bool(self._settings.redis_url.strip()),
-            secrets_loaded=False,
+            secrets_loaded=self._settings.operator_auth_configured,
             external_integrations_enabled=False,
             capabilities=[
                 RuntimeCapability(
@@ -36,6 +36,16 @@ class RuntimeSettingsService:
                     enabled=True,
                     detail=(
                         "Local owner fields are present, but no external auth provider is active."
+                    ),
+                ),
+                RuntimeCapability(
+                    key="operator_api_key",
+                    label="Operator API key",
+                    enabled=self._settings.operator_auth_configured,
+                    detail=(
+                        "Configured; production mutation endpoints require an operator key."
+                        if self._settings.operator_auth_configured
+                        else "Not configured; production mutation endpoints remain unavailable."
                     ),
                 ),
                 RuntimeCapability(

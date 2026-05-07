@@ -24,6 +24,7 @@ Required production environment variables:
 ```text
 JOBFINDER_API_ENVIRONMENT=production
 JOBFINDER_API_WRITE_API_ENABLED=false
+JOBFINDER_API_OPERATOR_API_KEY=<strong-random-operator-secret>
 JOBFINDER_API_LIVE_DISCOVERY_ENABLED=false
 JOBFINDER_API_LIVE_SEARCH_DISCOVERY_ENABLED=false
 JOBFINDER_API_LIVE_DISCOVERY_TIMEOUT_SECONDS=8
@@ -39,7 +40,7 @@ JOBFINDER_API_CORS_ALLOWED_ORIGINS=["https://jobfinder.quentincasares.com","http
 
 Do not deploy the API without a managed Postgres database. The local default database URL points at Docker Compose and is not valid in Vercel. Redis is included for future readiness but no queue worker depends on it in this tranche.
 
-Production write endpoints are disabled by default because this phase has no auth provider. Keep `JOBFINDER_API_WRITE_API_ENABLED=false` until authentication, roles, and operator controls exist. Keep the live capability flags disabled unless the environment has the matching approval workflow, source policies, and operator controls configured; each flag unlocks only its governed API surface and still stops before external submission.
+Production write endpoints are disabled by default because this phase has no auth provider. Keep `JOBFINDER_API_WRITE_API_ENABLED=false` until authentication, roles, and operator controls exist. Production mutation endpoints also require `x-jobfinder-operator-key` to match `JOBFINDER_API_OPERATOR_API_KEY`; do not enable live capability flags unless that secret is configured. Keep the live capability flags disabled unless the environment has the matching approval workflow, source policies, and operator controls configured; each flag unlocks only its governed API surface and still stops before external submission.
 
 Run database migrations against the production database before promoting traffic:
 
@@ -91,6 +92,7 @@ curl -fsSI http://127.0.0.1:3000/
 ## Guardrails
 
 - Only governed live surfaces should be deployed: bounded approved-source discovery, metadata-only candidate document records, evidence-backed draft packets, dry-run autofill packets, and final-review packets.
+- Keep production mutation endpoints behind the operator API key until a full auth provider replaces it.
 - Do not add CAPTCHA bypass, bot-detection bypass, login automation, third-party credential storage, real browser autofill, or external application submission without a separate approval-gated design.
 - Keep real candidate data out of fixtures, docs, and seed data.
 - Keep `NEXT_PUBLIC_API_BASE_URL` as the only client-exposed API setting.

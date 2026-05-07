@@ -1,0 +1,73 @@
+from __future__ import annotations
+
+from fastapi.testclient import TestClient
+
+from app.config import Settings
+from app.main import create_app
+
+
+def test_production_live_mutations_require_configured_operator_key() -> None:
+    app = create_app(Settings(environment="production", database_url="sqlite+pysqlite:///:memory:"))
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/live-discovery/runs",
+            json={"url": "https://careers.example.test/jobs/platform"},
+        )
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Operator API key is not configured."}
+
+
+def test_production_live_mutations_reject_missing_operator_key() -> None:
+    app = create_app(
+        Settings(
+            environment="production",
+            database_url="sqlite+pysqlite:///:memory:",
+            operator_api_key="operator-secret",
+        )
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/live-discovery/runs",
+            json={"url": "https://careers.example.test/jobs/platform"},
+        )
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "A valid operator API key is required."}
+
+
+def test_production_live_mutations_accept_operator_key() -> None:
+    app = create_app(
+        Settings(
+            environment="production",
+            database_url="sqlite+pysqlite:///:memory:",
+            operator_api_key="operator-secret",
+        )
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/live-discovery/runs",
+            headers={"x-jobfinder-operator-key": "operator-secret"},
+            json={"url": "https://careers.example.test/jobs/platform"},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "denied"
+    assert response.json()["failure"]["reason"] == "live_discovery_disabled"
+
+
+def test_local_live_mutations_do_not_require_operator_key() -> None:
+    app = create_app(Settings(environment="local-test", database_url="sqlite+pysqlite:///:memory:"))
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/live-discovery/runs",
+            json={"url": "https://careers.example.test/jobs/platform"},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "denied"
+    assert response.json()["failure"]["reason"] == "live_discovery_disabled"
