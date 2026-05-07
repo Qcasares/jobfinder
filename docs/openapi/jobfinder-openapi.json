@@ -545,6 +545,346 @@
         "title": "AuditExplorerSummary",
         "type": "object"
       },
+      "AutofillPacketFailure": {
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason",
+          "detail"
+        ],
+        "title": "AutofillPacketFailure",
+        "type": "object"
+      },
+      "AutofillPacketField": {
+        "properties": {
+          "field_key": {
+            "title": "Field Key",
+            "type": "string"
+          },
+          "provenance": {
+            "title": "Provenance",
+            "type": "string"
+          },
+          "value_preview": {
+            "title": "Value Preview",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field_key",
+          "value_preview",
+          "provenance"
+        ],
+        "title": "AutofillPacketField",
+        "type": "object"
+      },
+      "AutofillPacketRead": {
+        "properties": {
+          "approval_required": {
+            "default": true,
+            "title": "Approval Required",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "drafting_run_id": {
+            "title": "Drafting Run Id",
+            "type": "string"
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AutofillPacketFailure"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fields": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/AutofillPacketField"
+            },
+            "title": "Fields",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "requested_by": {
+            "title": "Requested By",
+            "type": "string"
+          },
+          "safety": {
+            "$ref": "#/components/schemas/AutofillPacketSafety"
+          },
+          "status": {
+            "enum": [
+              "denied",
+              "review_required"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "target_url": {
+            "title": "Target Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "drafting_run_id",
+          "target_url",
+          "requested_by",
+          "status",
+          "created_at"
+        ],
+        "title": "AutofillPacketRead",
+        "type": "object"
+      },
+      "AutofillPacketRequest": {
+        "properties": {
+          "drafting_run_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Drafting Run Id",
+            "type": "string"
+          },
+          "requested_by": {
+            "default": "local-operator",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Requested By",
+            "type": "string"
+          },
+          "target_url": {
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "title": "Target Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "drafting_run_id",
+          "target_url"
+        ],
+        "title": "AutofillPacketRequest",
+        "type": "object"
+      },
+      "AutofillPacketSafety": {
+        "properties": {
+          "application_created": {
+            "default": false,
+            "title": "Application Created",
+            "type": "boolean"
+          },
+          "autofill_performed": {
+            "default": false,
+            "title": "Autofill Performed",
+            "type": "boolean"
+          },
+          "browser_automation_performed": {
+            "default": false,
+            "title": "Browser Automation Performed",
+            "type": "boolean"
+          },
+          "dry_run": {
+            "default": true,
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "submit_performed": {
+            "default": false,
+            "title": "Submit Performed",
+            "type": "boolean"
+          }
+        },
+        "title": "AutofillPacketSafety",
+        "type": "object"
+      },
+      "CandidateDocumentRecordCreate": {
+        "properties": {
+          "byte_size": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 25000000.0,
+            "title": "Byte Size",
+            "type": "integer"
+          },
+          "consent_scope": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Consent Scope",
+            "type": "string"
+          },
+          "content_sha256": {
+            "maxLength": 64,
+            "minLength": 64,
+            "title": "Content Sha256",
+            "type": "string"
+          },
+          "display_name": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Display Name",
+            "type": "string"
+          },
+          "document_type": {
+            "enum": [
+              "cv",
+              "cover_letter",
+              "portfolio",
+              "certificate",
+              "credential",
+              "other"
+            ],
+            "title": "Document Type",
+            "type": "string"
+          },
+          "mime_type": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Mime Type",
+            "type": "string"
+          },
+          "retention_days": {
+            "maximum": 365.0,
+            "minimum": 1.0,
+            "title": "Retention Days",
+            "type": "integer"
+          },
+          "storage_ref": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Storage Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "document_type",
+          "display_name",
+          "storage_ref",
+          "content_sha256",
+          "byte_size",
+          "mime_type",
+          "consent_scope",
+          "retention_days"
+        ],
+        "title": "CandidateDocumentRecordCreate",
+        "type": "object"
+      },
+      "CandidateDocumentRecordRead": {
+        "properties": {
+          "byte_size": {
+            "title": "Byte Size",
+            "type": "integer"
+          },
+          "consent_recorded_at": {
+            "format": "date-time",
+            "title": "Consent Recorded At",
+            "type": "string"
+          },
+          "consent_scope": {
+            "title": "Consent Scope",
+            "type": "string"
+          },
+          "content_sha256": {
+            "title": "Content Sha256",
+            "type": "string"
+          },
+          "content_stored": {
+            "default": false,
+            "title": "Content Stored",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "document_type": {
+            "enum": [
+              "cv",
+              "cover_letter",
+              "portfolio",
+              "certificate",
+              "credential",
+              "other"
+            ],
+            "title": "Document Type",
+            "type": "string"
+          },
+          "extraction_approved": {
+            "default": false,
+            "title": "Extraction Approved",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "mime_type": {
+            "title": "Mime Type",
+            "type": "string"
+          },
+          "redaction_status": {
+            "title": "Redaction Status",
+            "type": "string"
+          },
+          "retention_delete_after": {
+            "format": "date-time",
+            "title": "Retention Delete After",
+            "type": "string"
+          },
+          "storage_ref": {
+            "title": "Storage Ref",
+            "type": "string"
+          },
+          "synthetic": {
+            "default": false,
+            "title": "Synthetic",
+            "type": "boolean"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "document_type",
+          "display_name",
+          "storage_ref",
+          "content_sha256",
+          "byte_size",
+          "mime_type",
+          "consent_scope",
+          "consent_recorded_at",
+          "retention_delete_after",
+          "redaction_status",
+          "created_at"
+        ],
+        "title": "CandidateDocumentRecordRead",
+        "type": "object"
+      },
       "CandidateEvidenceCreate": {
         "properties": {
           "description": {
@@ -914,6 +1254,371 @@
         "title": "DashboardSummary",
         "type": "object"
       },
+      "DraftingClaimMapping": {
+        "properties": {
+          "claim": {
+            "title": "Claim",
+            "type": "string"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "claim",
+          "evidence_ids"
+        ],
+        "title": "DraftingClaimMapping",
+        "type": "object"
+      },
+      "DraftingFailure": {
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason",
+          "detail"
+        ],
+        "title": "DraftingFailure",
+        "type": "object"
+      },
+      "DraftingRequest": {
+        "properties": {
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "requested_by": {
+            "default": "local-operator",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Requested By",
+            "type": "string"
+          },
+          "review_item_id": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Review Item Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "review_item_id",
+          "evidence_ids"
+        ],
+        "title": "DraftingRequest",
+        "type": "object"
+      },
+      "DraftingRunRead": {
+        "properties": {
+          "approval_required": {
+            "default": true,
+            "title": "Approval Required",
+            "type": "boolean"
+          },
+          "claim_mappings": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DraftingClaimMapping"
+            },
+            "title": "Claim Mappings",
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "draft_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draft Text"
+          },
+          "evidence_ids": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DraftingFailure"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "requested_by": {
+            "title": "Requested By",
+            "type": "string"
+          },
+          "review_item_id": {
+            "title": "Review Item Id",
+            "type": "string"
+          },
+          "safety": {
+            "$ref": "#/components/schemas/DraftingSafety"
+          },
+          "status": {
+            "enum": [
+              "denied",
+              "failed",
+              "review_required"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "review_item_id",
+          "requested_by",
+          "status",
+          "created_at"
+        ],
+        "title": "DraftingRunRead",
+        "type": "object"
+      },
+      "DraftingSafety": {
+        "properties": {
+          "application_created": {
+            "default": false,
+            "title": "Application Created",
+            "type": "boolean"
+          },
+          "autofill_performed": {
+            "default": false,
+            "title": "Autofill Performed",
+            "type": "boolean"
+          },
+          "llm_called": {
+            "default": false,
+            "title": "Llm Called",
+            "type": "boolean"
+          },
+          "submit_performed": {
+            "default": false,
+            "title": "Submit Performed",
+            "type": "boolean"
+          }
+        },
+        "title": "DraftingSafety",
+        "type": "object"
+      },
+      "FinalReviewPacketFailure": {
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason",
+          "detail"
+        ],
+        "title": "FinalReviewPacketFailure",
+        "type": "object"
+      },
+      "FinalReviewPacketRead": {
+        "properties": {
+          "approval_required": {
+            "default": true,
+            "title": "Approval Required",
+            "type": "boolean"
+          },
+          "autofill_packet_id": {
+            "title": "Autofill Packet Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FinalReviewPacketFailure"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "operator_confirmation": {
+            "anyOf": [
+              {
+                "const": "ready_for_final_review",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Operator Confirmation"
+          },
+          "requested_by": {
+            "title": "Requested By",
+            "type": "string"
+          },
+          "rollback_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rollback Notes"
+          },
+          "safety": {
+            "$ref": "#/components/schemas/FinalReviewPacketSafety"
+          },
+          "status": {
+            "enum": [
+              "denied",
+              "review_required"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "target_url": {
+            "title": "Target Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "autofill_packet_id",
+          "target_url",
+          "requested_by",
+          "status",
+          "created_at"
+        ],
+        "title": "FinalReviewPacketRead",
+        "type": "object"
+      },
+      "FinalReviewPacketRequest": {
+        "properties": {
+          "autofill_packet_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Autofill Packet Id",
+            "type": "string"
+          },
+          "operator_confirmation": {
+            "const": "ready_for_final_review",
+            "title": "Operator Confirmation",
+            "type": "string"
+          },
+          "requested_by": {
+            "default": "local-operator",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Requested By",
+            "type": "string"
+          },
+          "rollback_notes": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rollback Notes"
+          }
+        },
+        "required": [
+          "autofill_packet_id",
+          "operator_confirmation"
+        ],
+        "title": "FinalReviewPacketRequest",
+        "type": "object"
+      },
+      "FinalReviewPacketSafety": {
+        "properties": {
+          "application_created": {
+            "default": false,
+            "title": "Application Created",
+            "type": "boolean"
+          },
+          "external_side_effect": {
+            "default": false,
+            "title": "External Side Effect",
+            "type": "boolean"
+          },
+          "final_confirmation_recorded": {
+            "default": false,
+            "title": "Final Confirmation Recorded",
+            "type": "boolean"
+          },
+          "submit_performed": {
+            "default": false,
+            "title": "Submit Performed",
+            "type": "boolean"
+          },
+          "submit_policy_checked": {
+            "default": false,
+            "title": "Submit Policy Checked",
+            "type": "boolean"
+          }
+        },
+        "title": "FinalReviewPacketSafety",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1226,6 +1931,220 @@
           }
         ]
       },
+      "LiveDiscoveryFailure": {
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason",
+          "detail"
+        ],
+        "title": "LiveDiscoveryFailure",
+        "type": "object"
+      },
+      "LiveDiscoveryRequest": {
+        "properties": {
+          "requested_by": {
+            "default": "local-operator",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Requested By",
+            "type": "string"
+          },
+          "source_domain": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Domain"
+          },
+          "url": {
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "LiveDiscoveryRequest",
+        "type": "object"
+      },
+      "LiveDiscoveryRun": {
+        "properties": {
+          "content_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Type"
+          },
+          "discovered_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Discovered Count",
+            "type": "integer"
+          },
+          "discovered_urls": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Discovered Urls",
+            "type": "array"
+          },
+          "extracted_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Extracted Count",
+            "type": "integer"
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LiveDiscoveryFailure"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fetched_status_code": {
+            "anyOf": [
+              {
+                "maximum": 599.0,
+                "minimum": 100.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fetched Status Code"
+          },
+          "final_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final Url"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "requested_by": {
+            "title": "Requested By",
+            "type": "string"
+          },
+          "review_item_ids": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Review Item Ids",
+            "type": "array"
+          },
+          "source_domain": {
+            "title": "Source Domain",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/LiveDiscoveryStatus"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "url",
+          "source_domain",
+          "requested_by",
+          "status"
+        ],
+        "title": "LiveDiscoveryRun",
+        "type": "object"
+      },
+      "LiveDiscoveryStatus": {
+        "enum": [
+          "requested",
+          "denied",
+          "fetched",
+          "discovered",
+          "extracted",
+          "failed"
+        ],
+        "title": "LiveDiscoveryStatus",
+        "type": "string"
+      },
+      "LiveSearchDiscoveryRequest": {
+        "properties": {
+          "max_results": {
+            "default": 25,
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Max Results",
+            "type": "integer"
+          },
+          "requested_by": {
+            "default": "local-operator",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Requested By",
+            "type": "string"
+          },
+          "source_domain": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Domain"
+          },
+          "url": {
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "LiveSearchDiscoveryRequest",
+        "type": "object"
+      },
       "PolicyAction": {
         "enum": [
           "discover",
@@ -1342,7 +2261,8 @@
           "data_origin": {
             "enum": [
               "synthetic_adapter_fixture",
-              "synthetic_raw_posting"
+              "synthetic_raw_posting",
+              "live_extraction"
             ],
             "title": "Data Origin",
             "type": "string"
@@ -1581,9 +2501,15 @@
               "single_user_local_mode",
               "write_api",
               "live_crawling",
+              "live_discovery",
+              "live_search_discovery",
               "llm_calls",
+              "llm_drafting",
               "browser_automation",
+              "autofill_packets",
+              "submission_packets",
               "autofill_submit",
+              "candidate_vault",
               "real_candidate_data"
             ],
             "title": "Key",
@@ -2471,6 +3397,82 @@
         "summary": "Verify Audit Chain"
       }
     },
+    "/autofill/packets": {
+      "post": {
+        "operationId": "create_autofill_packet_autofill_packets_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutofillPacketRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutofillPacketRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Autofill Packet"
+      }
+    },
+    "/candidate/document-records": {
+      "post": {
+        "operationId": "create_candidate_document_record_candidate_document_records_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CandidateDocumentRecordCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateDocumentRecordRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Candidate Document Record"
+      }
+    },
     "/candidate/evidence": {
       "post": {
         "operationId": "create_candidate_evidence_candidate_evidence_post",
@@ -2621,6 +3623,82 @@
         "summary": "Dashboard Summary"
       }
     },
+    "/drafting/runs": {
+      "post": {
+        "operationId": "create_drafting_run_drafting_runs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DraftingRunRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Drafting Run"
+      }
+    },
+    "/final-review/packets": {
+      "post": {
+        "operationId": "create_final_review_packet_final_review_packets_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FinalReviewPacketRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinalReviewPacketRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Final Review Packet"
+      }
+    },
     "/health": {
       "get": {
         "operationId": "health_health_get",
@@ -2704,6 +3782,160 @@
           }
         },
         "summary": "Jobs Summary"
+      }
+    },
+    "/live-discovery/runs": {
+      "post": {
+        "operationId": "create_live_discovery_run_live_discovery_runs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LiveDiscoveryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveDiscoveryRun"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Live Discovery Run"
+      }
+    },
+    "/live-discovery/runs/{run_id}": {
+      "get": {
+        "operationId": "get_live_discovery_run_live_discovery_runs__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveDiscoveryRun"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Live Discovery Run"
+      }
+    },
+    "/live-discovery/search-runs": {
+      "post": {
+        "operationId": "create_live_search_discovery_run_live_discovery_search_runs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LiveSearchDiscoveryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveDiscoveryRun"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Live Search Discovery Run"
+      }
+    },
+    "/live-discovery/search-runs/{run_id}": {
+      "get": {
+        "operationId": "get_live_search_discovery_run_live_discovery_search_runs__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveDiscoveryRun"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Live Search Discovery Run"
       }
     },
     "/review/queue": {

@@ -14,6 +14,7 @@ from app.db.models import AuditEvent, CandidateEvidence, CandidateProfile, Searc
 from app.db.session import get_engine
 from app.main import create_app
 from app.schemas.candidate import (
+    CandidateDocumentRecordCreate,
     CandidateEvidenceCreate,
     CandidateProfileUpdate,
     CandidateWorkspaceRead,
@@ -85,6 +86,84 @@ def test_candidate_evidence_rejects_non_synthetic_source_url(session: Session) -
         )
 
 
+def test_candidate_document_record_requires_explicit_vault_enablement(session: Session) -> None:
+    service = CandidateWorkspaceService(session, settings=Settings(candidate_vault_enabled=False))
+
+    with pytest.raises(CandidateSafetyError, match="candidate vault is disabled"):
+        service.create_document_record(
+            CandidateDocumentRecordCreate(
+                document_type="cv",
+                display_name="Current CV",
+                storage_ref="vault://candidate-documents/current-cv.pdf",
+                content_sha256="a" * 64,
+                byte_size=1024,
+                mime_type="application/pdf",
+                consent_scope="job_search",
+                retention_days=90,
+            )
+        )
+
+
+def test_candidate_document_record_stores_metadata_only_and_audits(session: Session) -> None:
+    service = CandidateWorkspaceService(session, settings=Settings(candidate_vault_enabled=True))
+
+    record = service.create_document_record(
+        CandidateDocumentRecordCreate(
+            document_type="cv",
+            display_name="Current CV",
+            storage_ref="vault://candidate-documents/current-cv.pdf",
+            content_sha256="b" * 64,
+            byte_size=2048,
+            mime_type="application/pdf",
+            consent_scope="job_search",
+            retention_days=30,
+        )
+    )
+
+    assert record.document_type == "cv"
+    assert record.synthetic is False
+    assert record.extraction_approved is False
+    assert record.content_stored is False
+    assert record.storage_ref == "vault://candidate-documents/current-cv.pdf"
+    events = session.scalars(select(AuditEvent)).all()
+    assert [event.event_type for event in events] == ["candidate.document_record.created"]
+    assert events[0].payload["real_candidate_data"] is True
+    assert "content_sha256" in events[0].payload
+    assert "document_content" not in events[0].payload
+
+
+def test_candidate_document_record_rejects_credentials_and_inline_content(session: Session) -> None:
+    service = CandidateWorkspaceService(session, settings=Settings(candidate_vault_enabled=True))
+
+    with pytest.raises(CandidateSafetyError, match="credentials"):
+        service.create_document_record(
+            CandidateDocumentRecordCreate(
+                document_type="credential",
+                display_name="Job board password",
+                storage_ref="vault://candidate-documents/password.txt",
+                content_sha256="c" * 64,
+                byte_size=128,
+                mime_type="text/plain",
+                consent_scope="job_search",
+                retention_days=30,
+            )
+        )
+
+    with pytest.raises(CandidateSafetyError, match="document content"):
+        service.create_document_record(
+            CandidateDocumentRecordCreate(
+                document_type="cv",
+                display_name="Current CV",
+                storage_ref="vault://candidate-documents/current-cv.pdf",
+                content_sha256="d" * 64,
+                byte_size=2048,
+                mime_type="application/pdf",
+                consent_scope="Full CV text: private candidate details",
+                retention_days=30,
+            )
+        )
+
+
 def test_candidate_search_criteria_rejects_reversed_salary(session: Session) -> None:
     service = CandidateWorkspaceService(session)
 
@@ -133,6 +212,19 @@ def test_candidate_endpoints_return_typed_schemas(
             "synthetic": True,
         },
     )
+    document_response = client.post(
+        "/candidate/document-records",
+        json={
+            "document_type": "cv",
+            "display_name": "Current CV",
+            "storage_ref": "vault://candidate-documents/current-cv.pdf",
+            "content_sha256": "e" * 64,
+            "byte_size": 2048,
+            "mime_type": "application/pdf",
+            "consent_scope": "job_search",
+            "retention_days": 30,
+        },
+    )
 
     assert workspace_response.status_code == 200
     workspace = CandidateWorkspaceRead.model_validate(workspace_response.json())
@@ -140,6 +232,7 @@ def test_candidate_endpoints_return_typed_schemas(
     assert profile_response.status_code == 200
     assert evidence_response.status_code == 200
     assert criteria_response.status_code == 200
+    assert document_response.status_code == 422
 
     with Session(get_engine(database_url)) as db_session:
         assert len(db_session.scalars(select(CandidateProfile)).all()) == 1

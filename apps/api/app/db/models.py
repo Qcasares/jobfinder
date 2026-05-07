@@ -67,6 +67,33 @@ class CandidateEvidence(Base):
     candidate_profile: Mapped[CandidateProfile] = relationship(back_populates="evidence_items")
 
 
+class CandidateDocumentRecord(Base):
+    __tablename__ = "candidate_document_records"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    document_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    display_name: Mapped[str] = mapped_column(String(240), nullable=False)
+    storage_ref: Mapped[str] = mapped_column(Text(), nullable=False)
+    content_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    byte_size: Mapped[int] = mapped_column(nullable=False)
+    mime_type: Mapped[str] = mapped_column(String(120), nullable=False)
+    consent_scope: Mapped[str] = mapped_column(String(120), nullable=False)
+    consent_recorded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
+    retention_delete_after: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    redaction_status: Mapped[str] = mapped_column(
+        String(40), default="pending", nullable=False
+    )
+    extraction_approved: Mapped[bool] = mapped_column(default=False, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
+
+
 class SearchCriteria(TimestampMixin, Base):
     __tablename__ = "search_criteria"
 
@@ -217,6 +244,68 @@ class JobScore(Base):
     )
 
     job_posting: Mapped[JobPosting] = relationship(back_populates="scores")
+
+
+class DraftingRun(Base):
+    __tablename__ = "drafting_runs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    review_item_id: Mapped[str] = mapped_column(String(240), nullable=False, index=True)
+    requested_by: Mapped[str] = mapped_column(String(200), nullable=False)
+    status: Mapped[str] = mapped_column(String(40), nullable=False)
+    model: Mapped[str | None] = mapped_column(String(120))
+    draft_text: Mapped[str | None] = mapped_column(Text())
+    evidence_ids: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    claim_mappings: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSON,
+        default=list,
+        nullable=False,
+    )
+    approval_required: Mapped[bool] = mapped_column(default=True, nullable=False)
+    failure_reason: Mapped[str | None] = mapped_column(String(120))
+    failure_detail: Mapped[str | None] = mapped_column(Text())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
+
+
+class AutofillPacket(Base):
+    __tablename__ = "autofill_packets"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    drafting_run_id: Mapped[str] = mapped_column(
+        ForeignKey("drafting_runs.id"), nullable=False, index=True
+    )
+    target_url: Mapped[str] = mapped_column(Text(), nullable=False)
+    requested_by: Mapped[str] = mapped_column(String(200), nullable=False)
+    status: Mapped[str] = mapped_column(String(40), nullable=False)
+    fields: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list, nullable=False)
+    approval_required: Mapped[bool] = mapped_column(default=True, nullable=False)
+    failure_reason: Mapped[str | None] = mapped_column(String(120))
+    failure_detail: Mapped[str | None] = mapped_column(Text())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
+
+
+class FinalReviewPacket(Base):
+    __tablename__ = "final_review_packets"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    autofill_packet_id: Mapped[str] = mapped_column(
+        ForeignKey("autofill_packets.id"), nullable=False, index=True
+    )
+    target_url: Mapped[str] = mapped_column(Text(), nullable=False)
+    requested_by: Mapped[str] = mapped_column(String(200), nullable=False)
+    operator_confirmation: Mapped[str] = mapped_column(String(80), nullable=False)
+    rollback_notes: Mapped[str | None] = mapped_column(Text())
+    status: Mapped[str] = mapped_column(String(40), nullable=False)
+    approval_required: Mapped[bool] = mapped_column(default=True, nullable=False)
+    failure_reason: Mapped[str | None] = mapped_column(String(120))
+    failure_detail: Mapped[str | None] = mapped_column(Text())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
 
 
 class ApprovalRequest(Base):

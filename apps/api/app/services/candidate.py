@@ -1,14 +1,23 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import CandidateEvidence, CandidateProfile, SearchCriteria, User
+from app.config import Settings, get_settings
+from app.db.models import (
+    CandidateDocumentRecord,
+    CandidateEvidence,
+    CandidateProfile,
+    SearchCriteria,
+    User,
+)
 from app.schemas.audit import ActorType
 from app.schemas.candidate import (
+    CandidateDocumentRecordCreate,
+    CandidateDocumentRecordRead,
     CandidateEvidenceCreate,
     CandidateEvidenceRead,
     CandidateProfileRead,
@@ -32,8 +41,15 @@ class CandidateSafetyError(ValueError):
 
 
 class CandidateWorkspaceService:
-    def __init__(self, session: Session, *, audit_service: AuditEventService | None = None) -> None:
+    def __init__(
+        self,
+        session: Session,
+        *,
+        settings: Settings | None = None,
+        audit_service: AuditEventService | None = None,
+    ) -> None:
         self._session = session
+        self._settings = settings or get_settings()
         self._audit_service = audit_service or AuditEventService(session=session)
 
     def get_workspace(self) -> CandidateWorkspaceRead:
@@ -93,6 +109,52 @@ class CandidateWorkspaceService:
             },
         )
         return self._evidence_read(evidence)
+
+    def create_document_record(
+        self,
+        request: CandidateDocumentRecordCreate,
+    ) -> CandidateDocumentRecordRead:
+        if not self._settings.candidate_vault_enabled:
+            raise CandidateSafetyError("candidate vault is disabled by runtime configuration")
+        _validate_document_record(request)
+        user = self._user()
+        now = datetime.now(UTC)
+        record = CandidateDocumentRecord(
+            id=str(uuid4()),
+            user_id=user.id,
+            document_type=request.document_type,
+            display_name=request.display_name,
+            storage_ref=request.storage_ref,
+            content_sha256=request.content_sha256,
+            byte_size=request.byte_size,
+            mime_type=request.mime_type,
+            consent_scope=request.consent_scope,
+            consent_recorded_at=now,
+            retention_delete_after=now + timedelta(days=request.retention_days),
+            redaction_status="pending",
+            extraction_approved=False,
+        )
+        self._session.add(record)
+        self._session.flush()
+        self._audit_service.create_event(
+            event_type="candidate.document_record.created",
+            actor_type=ActorType.USER,
+            actor_id=user.id,
+            correlation_id=record.id,
+            payload={
+                "document_record_id": record.id,
+                "document_type": record.document_type,
+                "content_sha256": record.content_sha256,
+                "byte_size": record.byte_size,
+                "mime_type": record.mime_type,
+                "consent_scope": record.consent_scope,
+                "redaction_status": record.redaction_status,
+                "extraction_approved": False,
+                "content_stored": False,
+                "real_candidate_data": True,
+            },
+        )
+        return self._document_record_read(record)
 
     def create_search_criteria(self, request: SearchCriteriaCreate) -> SearchCriteriaRead:
         _validate_synthetic_text(request.name, request.query, request.location)
@@ -223,6 +285,29 @@ class CandidateWorkspaceService:
         return CandidateEvidenceRead.model_validate(evidence, from_attributes=True)
 
     @staticmethod
+    def _document_record_read(record: CandidateDocumentRecord) -> CandidateDocumentRecordRead:
+        return CandidateDocumentRecordRead.model_validate(
+            {
+                "id": record.id,
+                "user_id": record.user_id,
+                "document_type": record.document_type,
+                "display_name": record.display_name,
+                "storage_ref": record.storage_ref,
+                "content_sha256": record.content_sha256,
+                "byte_size": record.byte_size,
+                "mime_type": record.mime_type,
+                "consent_scope": record.consent_scope,
+                "consent_recorded_at": record.consent_recorded_at,
+                "retention_delete_after": record.retention_delete_after,
+                "redaction_status": record.redaction_status,
+                "extraction_approved": record.extraction_approved,
+                "content_stored": False,
+                "synthetic": False,
+                "created_at": record.created_at,
+            }
+        )
+
+    @staticmethod
     def _criteria_read(criteria: SearchCriteria) -> SearchCriteriaRead:
         return SearchCriteriaRead.model_validate(criteria, from_attributes=True)
 
@@ -245,3 +330,27 @@ def _validate_source_url(source_url: str | None) -> None:
         or normalized.startswith("https://example.test/")
     ):
         raise CandidateSafetyError("synthetic evidence source_url must use example.com/test")
+
+
+def _validate_document_record(request: CandidateDocumentRecordCreate) -> None:
+    if request.document_type == "credential":
+        raise CandidateSafetyError("third-party credentials cannot be stored in candidate records")
+    if not request.storage_ref.startswith("vault://"):
+        raise CandidateSafetyError("candidate document storage_ref must use vault://")
+    if request.mime_type not in {
+        "application/pdf",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "text/plain",
+    }:
+        raise CandidateSafetyError("candidate document mime_type is not allowed")
+    joined = f"{request.display_name} {request.storage_ref} {request.consent_scope}".casefold()
+    blocked_content_markers = {
+        "full cv text",
+        "private candidate details",
+        "password",
+        "secret",
+        "token",
+        "cookie",
+    }
+    if any(marker in joined for marker in blocked_content_markers):
+        raise CandidateSafetyError("document content and credentials must not be stored inline")

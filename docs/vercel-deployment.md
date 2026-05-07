@@ -24,6 +24,14 @@ Required production environment variables:
 ```text
 JOBFINDER_API_ENVIRONMENT=production
 JOBFINDER_API_WRITE_API_ENABLED=false
+JOBFINDER_API_LIVE_DISCOVERY_ENABLED=false
+JOBFINDER_API_LIVE_SEARCH_DISCOVERY_ENABLED=false
+JOBFINDER_API_LIVE_DISCOVERY_TIMEOUT_SECONDS=8
+JOBFINDER_API_LIVE_DISCOVERY_MAX_BYTES=1000000
+JOBFINDER_API_CANDIDATE_VAULT_ENABLED=false
+JOBFINDER_API_LLM_DRAFTING_ENABLED=false
+JOBFINDER_API_AUTOFILL_PACKETS_ENABLED=false
+JOBFINDER_API_SUBMISSION_PACKETS_ENABLED=false
 JOBFINDER_API_DATABASE_URL=<managed-postgres-sqlalchemy-url>
 JOBFINDER_API_REDIS_URL=
 JOBFINDER_API_CORS_ALLOWED_ORIGINS=["https://jobfinder.quentincasares.com","https://jobfinder-qcasares-projects.vercel.app"]
@@ -31,7 +39,7 @@ JOBFINDER_API_CORS_ALLOWED_ORIGINS=["https://jobfinder.quentincasares.com","http
 
 Do not deploy the API without a managed Postgres database. The local default database URL points at Docker Compose and is not valid in Vercel. Redis is included for future readiness but no queue worker depends on it in this tranche.
 
-Production write endpoints are disabled by default because this phase has no auth provider. Keep `JOBFINDER_API_WRITE_API_ENABLED=false` until authentication, roles, and operator controls exist.
+Production write endpoints are disabled by default because this phase has no auth provider. Keep `JOBFINDER_API_WRITE_API_ENABLED=false` until authentication, roles, and operator controls exist. Keep the live capability flags disabled unless the environment has the matching approval workflow, source policies, and operator controls configured; each flag unlocks only its governed API surface and still stops before external submission.
 
 Run database migrations against the production database before promoting traffic:
 
@@ -64,10 +72,10 @@ The dashboard page is marked dynamic so Vercel renders it per request and reads 
 2. Attach a managed Postgres database and set `JOBFINDER_API_DATABASE_URL`.
 3. Set `JOBFINDER_API_CORS_ALLOWED_ORIGINS` to the final web production origin.
 4. Run `uv run alembic upgrade head` against the managed database.
-5. Deploy the API and verify `/health`.
+5. Deploy the API and verify `/health` and `/settings/runtime`.
 6. Create or connect the web project in Vercel with root directory `apps/web`.
 7. Set `NEXT_PUBLIC_API_BASE_URL` to the API production URL.
-8. Deploy the web project and verify the dashboard shows `API data`.
+8. Deploy the web project and verify the dashboard shows `API data` and the current live capability states.
 
 ## Preflight Checks
 
@@ -82,7 +90,8 @@ curl -fsSI http://127.0.0.1:3000/
 
 ## Guardrails
 
-- No crawling, LLM calls, browser automation, autofill, or submit routes should be added for deployment.
+- Only governed live surfaces should be deployed: bounded approved-source discovery, metadata-only candidate document records, evidence-backed draft packets, dry-run autofill packets, and final-review packets.
+- Do not add CAPTCHA bypass, bot-detection bypass, login automation, third-party credential storage, real browser autofill, or external application submission without a separate approval-gated design.
 - Keep real candidate data out of fixtures, docs, and seed data.
 - Keep `NEXT_PUBLIC_API_BASE_URL` as the only client-exposed API setting.
 - Do not expose database URLs, Redis URLs, API keys, or other secrets in the web project.

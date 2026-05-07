@@ -6,7 +6,7 @@ This repository is a governed Jobfinder foundation monorepo. It has a FastAPI AP
 
 ## Product Guardrails
 
-Keep the foundation deny-by-default and auditable. Unknown sources deny every action until reviewed. Audit events are append-only through the service layer and hash-chained. Use only synthetic fixtures and sanitized examples. Do not add live crawling, browser automation, LLM calls, real candidate files, autofill, or application submission without an explicit later-phase request and approval-gate design.
+Keep the foundation deny-by-default and auditable. Unknown sources deny every action until reviewed. Audit events are append-only through the service layer and hash-chained. Use only synthetic fixtures and sanitized examples. Later-phase live capabilities must stay behind explicit runtime flags, source-policy gates, and review packets. Do not add CAPTCHA bypass, bot-detection bypass, login automation, third-party credential storage, real browser autofill, or external application submission without a separate approval-gated design.
 
 ## Commands
 

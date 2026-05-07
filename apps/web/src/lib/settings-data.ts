@@ -4,9 +4,15 @@ export type RuntimeCapabilityKey =
   | "audit_hash_chain"
   | "single_user_local_mode"
   | "live_crawling"
+  | "live_discovery"
+  | "live_search_discovery"
   | "llm_calls"
+  | "llm_drafting"
   | "browser_automation"
+  | "autofill_packets"
+  | "submission_packets"
   | "autofill_submit"
+  | "candidate_vault"
   | "real_candidate_data";
 
 export type RuntimeCapability = {
@@ -133,31 +139,70 @@ function localSettingsSnapshot(detail: string, checkedUrl?: string): SettingsSna
           key: "live_crawling",
           label: "Live crawling",
           enabled: false,
-          detail: "Disabled in phase 1; only deterministic synthetic fixtures are used."
+          detail: "Disabled; broad unbounded crawling is not part of the live intake tranche."
+        },
+        {
+          key: "live_discovery",
+          label: "Live discovery",
+          enabled: false,
+          detail: "Disabled by default; enable only with source policy and audit gates."
+        },
+        {
+          key: "live_search_discovery",
+          label: "Live search discovery",
+          enabled: false,
+          detail: "Disabled by default; enable only after crawl budgets and policies."
         },
         {
           key: "llm_calls",
           label: "LLM calls",
           enabled: false,
-          detail: "Disabled in phase 1; no model provider or API key is configured."
+          detail: "Disabled by default; no model provider is invoked."
+        },
+        {
+          key: "llm_drafting",
+          label: "LLM-assisted drafting",
+          enabled: false,
+          detail: "Disabled by default; drafting requires explicit runtime opt-in."
         },
         {
           key: "browser_automation",
           label: "Browser automation",
           enabled: false,
-          detail: "Disabled in phase 1; no browser agent is invoked by the product."
+          detail:
+            "Disabled; autofill packets are dry-run review artifacts and do not invoke a browser agent."
+        },
+        {
+          key: "autofill_packets",
+          label: "Autofill packets",
+          enabled: false,
+          detail: "Disabled by default; packet preparation requires explicit opt-in."
+        },
+        {
+          key: "submission_packets",
+          label: "Final review packets",
+          enabled: false,
+          detail: "Disabled by default; final review packet preparation requires explicit opt-in."
         },
         {
           key: "autofill_submit",
           label: "Autofill and submit",
           enabled: false,
-          detail: "Disabled in phase 1; application records remain read-only."
+          detail:
+            "Disabled; autofill packets are dry-run review artifacts and external submission remains blocked."
+        },
+        {
+          key: "candidate_vault",
+          label: "Candidate vault",
+          enabled: false,
+          detail: "Disabled by default; real candidate document records require explicit vault enablement."
         },
         {
           key: "real_candidate_data",
           label: "Real candidate data",
           enabled: false,
-          detail: "Disabled in phase 1; only synthetic examples are accepted."
+          detail:
+            "Disabled for profile/evidence text; candidate vault records may only reference external encrypted storage metadata when separately enabled."
         }
       ]
     }

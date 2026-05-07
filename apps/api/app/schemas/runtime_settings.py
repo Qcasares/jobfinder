@@ -10,9 +10,15 @@ RuntimeCapabilityKey = Literal[
     "single_user_local_mode",
     "write_api",
     "live_crawling",
+    "live_discovery",
+    "live_search_discovery",
     "llm_calls",
+    "llm_drafting",
     "browser_automation",
+    "autofill_packets",
+    "submission_packets",
     "autofill_submit",
+    "candidate_vault",
     "real_candidate_data",
 ]
 

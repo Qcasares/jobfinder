@@ -52,6 +52,43 @@ export type RuntimeSettingsResponse = {
   capabilities: RuntimeCapability[];
 };
 
+export type LiveDiscoveryStatus =
+  | "requested"
+  | "denied"
+  | "fetched"
+  | "discovered"
+  | "extracted"
+  | "failed";
+
+export type LiveDiscoveryRequest = {
+  url: string;
+  source_domain?: string;
+  requested_by?: string;
+};
+
+export type LiveSearchDiscoveryRequest = LiveDiscoveryRequest & {
+  max_results?: number;
+};
+
+export type LiveDiscoveryRun = {
+  id: string;
+  url: string;
+  final_url: string | null;
+  source_domain: string;
+  requested_by: string;
+  status: LiveDiscoveryStatus;
+  fetched_status_code: number | null;
+  content_type: string | null;
+  extracted_count: number;
+  review_item_ids: string[];
+  discovered_count: number;
+  discovered_urls: string[];
+  failure: {
+    reason: string;
+    detail: string;
+  } | null;
+};
+
 export class JobfinderApiError extends Error {
   readonly status: number;
   readonly url: string;
@@ -85,6 +122,24 @@ export class JobfinderApiClient {
 
   checkSourcePolicy(request: SourcePolicyCheckRequest): Promise<SourcePolicyDecision> {
     return this.request<SourcePolicyDecision>("/source-policies/check", {
+      body: JSON.stringify(request),
+      headers: { accept: "application/json", "content-type": "application/json" },
+      method: "POST"
+    });
+  }
+
+  createLiveDiscoveryRun(request: LiveDiscoveryRequest): Promise<LiveDiscoveryRun> {
+    return this.request<LiveDiscoveryRun>("/live-discovery/runs", {
+      body: JSON.stringify(request),
+      headers: { accept: "application/json", "content-type": "application/json" },
+      method: "POST"
+    });
+  }
+
+  createLiveSearchDiscoveryRun(
+    request: LiveSearchDiscoveryRequest
+  ): Promise<LiveDiscoveryRun> {
+    return this.request<LiveDiscoveryRun>("/live-discovery/search-runs", {
       body: JSON.stringify(request),
       headers: { accept: "application/json", "content-type": "application/json" },
       method: "POST"

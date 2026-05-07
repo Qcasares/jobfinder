@@ -51,31 +51,113 @@ class RuntimeSettingsService:
                     key="live_crawling",
                     label="Live crawling",
                     enabled=False,
-                    detail="Disabled in phase 1; only deterministic synthetic fixtures are used.",
+                    detail=(
+                        "Disabled; broad unbounded crawling is not part of the live intake tranche."
+                    ),
+                ),
+                RuntimeCapability(
+                    key="live_discovery",
+                    label="Live discovery",
+                    enabled=self._settings.live_discovery_enabled,
+                    detail=(
+                        "Live discovery is explicitly enabled for policy-approved sources only."
+                        if self._settings.live_discovery_enabled
+                        else "Disabled by default; enable only with source policy and audit gates."
+                    ),
+                ),
+                RuntimeCapability(
+                    key="live_search_discovery",
+                    label="Live search discovery",
+                    enabled=self._settings.live_search_discovery_enabled,
+                    detail=(
+                        "Search-result discovery is explicitly enabled for approved sources only."
+                        if self._settings.live_search_discovery_enabled
+                        else "Disabled by default; enable only after crawl budgets and policies."
+                    ),
                 ),
                 RuntimeCapability(
                     key="llm_calls",
                     label="LLM calls",
-                    enabled=False,
-                    detail="Disabled in phase 1; no model provider or API key is configured.",
+                    enabled=self._settings.llm_drafting_enabled,
+                    detail=(
+                        "Enabled only for drafting packets; outputs require human review and "
+                        "cannot autofill or submit applications."
+                        if self._settings.llm_drafting_enabled
+                        else "Disabled by default; no model provider is invoked."
+                    ),
+                ),
+                RuntimeCapability(
+                    key="llm_drafting",
+                    label="LLM-assisted drafting",
+                    enabled=self._settings.llm_drafting_enabled,
+                    detail=(
+                        "Drafting packets are enabled with claim-to-evidence mapping and "
+                        "review-required output."
+                        if self._settings.llm_drafting_enabled
+                        else "Disabled by default; drafting requires explicit runtime opt-in."
+                    ),
                 ),
                 RuntimeCapability(
                     key="browser_automation",
                     label="Browser automation",
                     enabled=False,
-                    detail="Disabled in phase 1; no browser agent is invoked by the product.",
+                    detail=(
+                        "Disabled; autofill packets are dry-run review artifacts and do not "
+                        "invoke a browser agent."
+                    ),
+                ),
+                RuntimeCapability(
+                    key="autofill_packets",
+                    label="Autofill packets",
+                    enabled=self._settings.autofill_packets_enabled,
+                    detail=(
+                        "Enabled for dry-run field packets only; browser automation and submit "
+                        "remain disabled."
+                        if self._settings.autofill_packets_enabled
+                        else "Disabled by default; packet preparation requires explicit opt-in."
+                    ),
+                ),
+                RuntimeCapability(
+                    key="submission_packets",
+                    label="Final review packets",
+                    enabled=self._settings.submission_packets_enabled,
+                    detail=(
+                        "Enabled for final review records only; no external submission is "
+                        "performed by this API."
+                        if self._settings.submission_packets_enabled
+                        else "Disabled by default; final review packet preparation requires "
+                        "explicit opt-in."
+                    ),
                 ),
                 RuntimeCapability(
                     key="autofill_submit",
                     label="Autofill and submit",
                     enabled=False,
-                    detail="Disabled in phase 1; application records remain read-only.",
+                    detail=(
+                        "Disabled; autofill packets are dry-run review artifacts and external "
+                        "submission remains blocked."
+                    ),
+                ),
+                RuntimeCapability(
+                    key="candidate_vault",
+                    label="Candidate vault",
+                    enabled=self._settings.candidate_vault_enabled,
+                    detail=(
+                        "Enabled for metadata-only candidate document records; document bytes "
+                        "and credentials are not stored by Jobfinder."
+                        if self._settings.candidate_vault_enabled
+                        else "Disabled by default; real candidate document records require "
+                        "explicit vault enablement."
+                    ),
                 ),
                 RuntimeCapability(
                     key="real_candidate_data",
                     label="Real candidate data",
                     enabled=False,
-                    detail="Disabled in phase 1; only synthetic examples are accepted.",
+                    detail=(
+                        "Disabled for profile/evidence text; candidate vault records may only "
+                        "reference external encrypted storage metadata when separately enabled."
+                    ),
                 ),
             ],
         )

@@ -42,6 +42,11 @@ import type {
 import type { ApiHealthStatus } from "@/lib/health";
 import type { JobCatalogSnapshot, JobItem } from "@/lib/job-data";
 import {
+  createLiveDiscoveryRun,
+  createLiveSearchDiscoveryRun,
+  type LiveDiscoveryRun
+} from "@/lib/live-discovery-data";
+import {
   dashboardData,
   evaluateSourcePolicyLocally,
   getPipelineTotal,
@@ -123,9 +128,9 @@ const helpContent = {
       "Open Applications to see tracked application status."
     ],
     guardrails: [
-      "Safe local mode is active.",
-      "Only synthetic job and profile data should be used.",
-      "No crawling, autofill, or submission action is available."
+      "Review-first mode is active.",
+      "Use synthetic job/profile examples unless candidate vault metadata is explicitly enabled.",
+      "Live discovery and packet preparation stay behind runtime flags, source policies, and manual review."
     ]
   },
   profile: {
@@ -352,9 +357,9 @@ export function DashboardShell({
               })}
             </nav>
             <div className="mt-auto hidden rounded-card border border-border bg-muted/60 p-3 text-xs text-muted-foreground lg:block">
-              <p className="font-medium text-foreground">Safe local mode</p>
+              <p className="font-medium text-foreground">Review-first mode</p>
               <p className="mt-1 leading-5">
-                No crawling, LLM calls, browser automation, or submissions.
+                Governed live intake can be enabled; browser automation and submission stay blocked.
               </p>
             </div>
           </div>
@@ -517,11 +522,12 @@ function SafeLocalModeIntro() {
       <CardContent className="flex items-start gap-3">
         <ShieldCheck className="mt-0.5 size-5 shrink-0 text-blue-700" aria-hidden="true" />
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-blue-950">Safe local mode</p>
+          <p className="text-sm font-semibold text-blue-950">Review-first operating mode</p>
           <p className="mt-1 text-sm leading-5 text-blue-900">
             Review synthetic job matches, profile evidence, application status, and approval
-            gates. Jobfinder will not crawl sites, call an LLM, automate a browser, autofill forms,
-            or submit applications in this phase.
+            gates. Jobfinder can expose gated live intake and review packets when runtime flags
+            are enabled; browser execution, credential capture, and external submissions remain
+            blocked.
           </p>
         </div>
       </CardContent>
@@ -783,6 +789,7 @@ function SystemStatusWorkspace({
   return (
     <div className="grid gap-4 p-4 sm:p-6 xl:grid-cols-[1.55fr_0.95fr]">
       <section className="grid gap-4">
+        <LiveIntakePanel capabilities={settingsSnapshot.runtime.capabilities} />
         <RuntimeCapabilityPanel capabilities={settingsSnapshot.runtime.capabilities} />
         <RuntimeSettingsPanel snapshot={settingsSnapshot} />
       </section>
@@ -1652,6 +1659,194 @@ function ApplicationTable({ applications }: { applications: readonly Application
   );
 }
 
+function LiveIntakePanel({
+  capabilities
+}: {
+  capabilities: readonly RuntimeCapability[];
+}) {
+  const liveDiscoveryEnabled = isCapabilityEnabled(capabilities, "live_discovery");
+  const liveSearchEnabled = isCapabilityEnabled(capabilities, "live_search_discovery");
+  const [mode, setMode] = useState<"job" | "search">("job");
+  const [url, setUrl] = useState("");
+  const [sourceDomain, setSourceDomain] = useState("");
+  const [maxResults, setMaxResults] = useState(10);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [run, setRun] = useState<LiveDiscoveryRun | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const activeEnabled = mode === "job" ? liveDiscoveryEnabled : liveSearchEnabled;
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsSubmitting(true);
+    setError(null);
+    setRun(null);
+
+    try {
+      const result =
+        mode === "job"
+          ? await createLiveDiscoveryRun({
+              url,
+              sourceDomain: sourceDomain.trim() || undefined
+            })
+          : await createLiveSearchDiscoveryRun({
+              url,
+              sourceDomain: sourceDomain.trim() || undefined,
+              maxResults
+            });
+      setRun(result);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Live intake failed.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <CardTitle>Live Intake</CardTitle>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Submit one approved HTTPS page, or discover same-domain job links from an approved
+            search page.
+          </p>
+        </div>
+        <Badge tone={activeEnabled ? "success" : "neutral"}>
+          {activeEnabled ? "enabled" : "disabled"}
+        </Badge>
+      </CardHeader>
+      <CardContent>
+        <form className="grid gap-4" onSubmit={handleSubmit}>
+          <div className="inline-grid w-full grid-cols-2 rounded-md border border-border bg-muted/40 p-1 sm:w-fit">
+            <button
+              type="button"
+              aria-pressed={mode === "job"}
+              onClick={() => setMode("job")}
+              className={cn(
+                "rounded px-3 py-2 text-sm font-medium",
+                mode === "job" ? "bg-white text-foreground shadow-sm" : "text-muted-foreground"
+              )}
+            >
+              Job page
+            </button>
+            <button
+              type="button"
+              aria-pressed={mode === "search"}
+              onClick={() => setMode("search")}
+              className={cn(
+                "rounded px-3 py-2 text-sm font-medium",
+                mode === "search" ? "bg-white text-foreground shadow-sm" : "text-muted-foreground"
+              )}
+            >
+              Search page
+            </button>
+          </div>
+          <div className="grid gap-3 md:grid-cols-[1.4fr_0.8fr]">
+            <label className="grid gap-1 text-sm font-medium">
+              URL
+              <input
+                type="url"
+                required
+                value={url}
+                onChange={(event) => setUrl(event.target.value)}
+                placeholder="https://careers.example.test/jobs/platform"
+                className="h-10 rounded-md border border-border bg-white px-3 text-sm font-normal outline-none focus:border-primary"
+              />
+            </label>
+            <label className="grid gap-1 text-sm font-medium">
+              Source domain
+              <input
+                type="text"
+                value={sourceDomain}
+                onChange={(event) => setSourceDomain(event.target.value)}
+                placeholder="careers.example.test"
+                className="h-10 rounded-md border border-border bg-white px-3 text-sm font-normal outline-none focus:border-primary"
+              />
+            </label>
+          </div>
+          {mode === "search" ? (
+            <label className="grid max-w-48 gap-1 text-sm font-medium">
+              Max results
+              <input
+                type="number"
+                min={1}
+                max={100}
+                value={maxResults}
+                onChange={(event) => setMaxResults(Number(event.target.value))}
+                className="h-10 rounded-md border border-border bg-white px-3 text-sm font-normal outline-none focus:border-primary"
+              />
+            </label>
+          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className={cn(
+                "inline-flex h-10 items-center gap-2 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground",
+                "disabled:cursor-not-allowed disabled:opacity-60"
+              )}
+            >
+              {isSubmitting ? (
+                <RefreshCcw className="size-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Search className="size-4" aria-hidden="true" />
+              )}
+              Run intake
+            </button>
+            <Badge tone={activeEnabled ? "success" : "warning"}>
+              {activeEnabled ? "policy gated" : "runtime flag off"}
+            </Badge>
+          </div>
+        </form>
+        {error ? (
+          <p className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">
+            {error}
+          </p>
+        ) : null}
+        {run ? <LiveIntakeResult run={run} /> : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+function LiveIntakeResult({ run }: { run: LiveDiscoveryRun }) {
+  return (
+    <div className="mt-4 rounded-md border border-border bg-muted/40 p-3 text-sm">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge tone={run.status === "denied" || run.status === "failed" ? "warning" : "success"}>
+          {run.status}
+        </Badge>
+        <span className="font-mono text-xs text-muted-foreground">{run.id}</span>
+      </div>
+      <div className="mt-3 grid gap-2 text-muted-foreground sm:grid-cols-2">
+        <p>
+          Extracted: <span className="font-medium text-foreground">{run.extractedCount}</span>
+        </p>
+        <p>
+          Discovered: <span className="font-medium text-foreground">{run.discoveredCount}</span>
+        </p>
+      </div>
+      {run.failure ? <p className="mt-2 text-red-900">{run.failure.detail}</p> : null}
+      {run.discoveredUrls.length > 0 ? (
+        <ul className="mt-3 grid gap-1">
+          {run.discoveredUrls.slice(0, 8).map((discoveredUrl) => (
+            <li key={discoveredUrl} className="truncate font-mono text-xs text-muted-foreground">
+              {discoveredUrl}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+function isCapabilityEnabled(
+  capabilities: readonly RuntimeCapability[],
+  key: RuntimeCapability["key"]
+) {
+  return capabilities.some((capability) => capability.key === key && capability.enabled);
+}
+
 function RuntimeCapabilityPanel({
   capabilities
 }: {
@@ -1895,8 +2090,8 @@ function ContextHelpPopover({
           ordered={false}
         />
         <div className="rounded-md border border-border bg-muted/50 px-3 py-3 text-xs leading-5 text-muted-foreground">
-          No crawling, LLM calls, browser automation, autofill, or submissions are available in
-          this phase.
+          Live intake and packet preparation require explicit runtime flags and source policies.
+          Browser execution, credential capture, and external submissions remain blocked.
         </div>
       </div>
     </aside>

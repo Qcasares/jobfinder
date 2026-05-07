@@ -17,6 +17,14 @@ class Settings(BaseSettings):
     )
     audit_schema_version: int = Field(default=1, ge=1)
     write_api_enabled: bool = Field(default=False)
+    live_discovery_enabled: bool = Field(default=False)
+    live_search_discovery_enabled: bool = Field(default=False)
+    live_discovery_timeout_seconds: float = Field(default=8.0, gt=0)
+    live_discovery_max_bytes: int = Field(default=1_000_000, ge=1024)
+    candidate_vault_enabled: bool = Field(default=False)
+    llm_drafting_enabled: bool = Field(default=False)
+    autofill_packets_enabled: bool = Field(default=False)
+    submission_packets_enabled: bool = Field(default=False)
     cors_allowed_origins: list[str] = Field(
         default_factory=lambda: [
             "http://127.0.0.1:3000",

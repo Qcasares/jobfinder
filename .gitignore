@@ -15,6 +15,10 @@ build/
 coverage/
 htmlcov/
 
+# Local agent/browser artifacts
+.gstack/
+.playwright-cli/
+
 # Local environment
 .env
 .env.*
@@ -30,4 +34,3 @@ redis-data/
 .DS_Store
 .idea/
 .vscode/
-

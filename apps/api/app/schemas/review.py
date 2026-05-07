@@ -8,7 +8,11 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.schemas.extraction import RemoteType, ReviewStatus
 
 ReviewQueueStatusFilter = Literal["all", "ready", "needs_review"]
-ReviewDataOrigin = Literal["synthetic_adapter_fixture", "synthetic_raw_posting"]
+ReviewDataOrigin = Literal[
+    "synthetic_adapter_fixture",
+    "synthetic_raw_posting",
+    "live_extraction",
+]
 
 
 class ReviewProvenanceHint(BaseModel):

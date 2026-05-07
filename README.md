@@ -1,6 +1,6 @@
 # Jobfinder
 
-Jobfinder is a governed job-search agent foundation. The first tranche builds the audit, policy, API, and dashboard spine only. It does not crawl job boards, call LLMs, automate browsers, submit applications, or store real candidate data.
+Jobfinder is a governed job-search agent foundation. It keeps search intake, candidate material, drafting, autofill previews, and final-review packets behind explicit runtime flags and source-policy gates. The production posture remains review-first: no CAPTCHA bypass, bot-detection bypass, login automation, credential storage, real browser autofill, or external application submission is performed.
 
 ## Stack
 
@@ -46,4 +46,4 @@ Use `docs/vercel-deployment.md` for the Vercel production runbook. Deploy the Fa
 
 ## Guardrails
 
-Unknown sources deny every action until reviewed. Audit events are append-only through the service layer and hash-chained for tamper evidence. Use only synthetic fixtures and sanitized examples in this repository.
+Unknown sources deny every action until reviewed. Audit events are append-only through the service layer and hash-chained for tamper evidence. Live discovery is bounded to approved HTTPS sources, drafting requires evidence-backed review packets, autofill is dry-run preview data only, and final-review packets stop before external side effects. Use only synthetic fixtures and sanitized examples in this repository.

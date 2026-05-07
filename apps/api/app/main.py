@@ -1,9 +1,10 @@
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterator
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 
 from app.config import Settings, get_settings
@@ -21,7 +22,10 @@ from app.schemas.audit_explorer import (
     AuditExplorerEvent,
     AuditExplorerSummary,
 )
+from app.schemas.autofill import AutofillPacketRead, AutofillPacketRequest
 from app.schemas.candidate import (
+    CandidateDocumentRecordCreate,
+    CandidateDocumentRecordRead,
     CandidateEvidenceCreate,
     CandidateEvidenceRead,
     CandidateProfileRead,
@@ -31,8 +35,15 @@ from app.schemas.candidate import (
     SearchCriteriaRead,
 )
 from app.schemas.dashboard import DashboardSummary
+from app.schemas.drafting import DraftingRequest, DraftingRunRead
+from app.schemas.final_review import FinalReviewPacketRead, FinalReviewPacketRequest
 from app.schemas.health import HealthResponse
 from app.schemas.jobs import JobListItem, JobStatusFilter, JobSummary
+from app.schemas.live_discovery import (
+    LiveDiscoveryRequest,
+    LiveDiscoveryRun,
+    LiveSearchDiscoveryRequest,
+)
 from app.schemas.policy import PolicyDecision
 from app.schemas.review import ReviewQueueItem, ReviewQueueStatusFilter, ReviewQueueSummary
 from app.schemas.runtime_settings import RuntimeSettingsRead
@@ -54,10 +65,14 @@ from app.services.approvals import (
 )
 from app.services.audit import AuditEventService
 from app.services.audit_explorer import AuditExplorerService
+from app.services.autofill import AutofillPacketService
 from app.services.candidate import CandidateSafetyError, CandidateWorkspaceService
 from app.services.dashboard import DashboardService
 from app.services.domain import DomainNormalizationError
+from app.services.drafting import DraftingProvider, DraftingSafetyError, DraftingService
+from app.services.final_review import FinalReviewPacketService
 from app.services.jobs import JobCatalogService
+from app.services.live_discovery import FetchFunction, LiveDiscoveryService
 from app.services.production_guard import WRITE_API_DISABLED_DETAIL
 from app.services.review_queue import ReviewQueueService
 from app.services.runtime_settings import RuntimeSettingsService
@@ -66,6 +81,7 @@ from app.services.source_registry import SourceRegistryService
 WRITE_GATED_ROUTES = {
     "/approvals/requests",
     "/candidate/evidence",
+    "/candidate/document-records",
     "/candidate/profile",
     "/candidate/search-criteria",
     "/source-policies/seed-known",
@@ -73,9 +89,19 @@ WRITE_GATED_ROUTES = {
 }
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None,
+    *,
+    live_discovery_fetcher: FetchFunction | None = None,
+    drafting_provider: DraftingProvider | None = None,
+    test_engine: Engine | None = None,
+) -> FastAPI:
     resolved_settings = settings or get_settings()
     app = FastAPI(title="Jobfinder API", version="0.1.0")
+    live_discovery_service = LiveDiscoveryService(
+        settings=resolved_settings,
+        fetcher=live_discovery_fetcher,
+    )
 
     @app.middleware("http")
     async def security_headers(
@@ -118,6 +144,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
     if settings is not None:
         app.dependency_overrides[get_settings] = lambda: resolved_settings
+    if test_engine is not None:
+
+        def get_test_db_session() -> Iterator[Session]:
+            with Session(test_engine) as session:
+                try:
+                    yield session
+                    session.commit()
+                except Exception:
+                    session.rollback()
+                    raise
+
+        app.dependency_overrides[get_db_session] = get_test_db_session
 
     @app.get("/health", response_model=HealthResponse)
     def health() -> HealthResponse:
@@ -157,6 +195,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         except CandidateSafetyError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 
+    @app.post("/candidate/document-records", response_model=CandidateDocumentRecordRead)
+    def create_candidate_document_record(
+        request: CandidateDocumentRecordCreate,
+        session: Annotated[Session, Depends(get_db_session)],
+    ) -> CandidateDocumentRecordRead:
+        try:
+            return CandidateWorkspaceService(
+                session,
+                settings=resolved_settings,
+            ).create_document_record(request)
+        except CandidateSafetyError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
     @app.post("/candidate/search-criteria", response_model=SearchCriteriaRead)
     def create_candidate_search_criteria(
         request: SearchCriteriaCreate,
@@ -169,11 +220,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/review/queue", response_model=list[ReviewQueueItem])
     def review_queue(status: ReviewQueueStatusFilter = "all") -> list[ReviewQueueItem]:
-        return ReviewQueueService().list_items(status=status)
+        return ReviewQueueService(
+            raw_postings=(),
+            fixture_specs=None,
+        ).list_items(status=status) + [
+            item
+            for item in live_discovery_service.review_items()
+            if status == "all" or item.review_status == status
+        ]
 
     @app.get("/review/summary", response_model=ReviewQueueSummary)
     def review_summary() -> ReviewQueueSummary:
-        return ReviewQueueService().get_summary()
+        items = review_queue(status="all")
+        ready = sum(1 for item in items if item.review_status == "ready")
+        needs_review = sum(1 for item in items if item.review_status == "needs_review")
+        return ReviewQueueSummary(total=len(items), ready=ready, needs_review=needs_review)
 
     @app.get("/jobs", response_model=list[JobListItem])
     def list_jobs(status: JobStatusFilter = "all") -> list[JobListItem]:
@@ -182,6 +243,68 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/jobs/summary", response_model=JobSummary)
     def jobs_summary() -> JobSummary:
         return JobCatalogService().get_summary()
+
+    @app.post("/autofill/packets", response_model=AutofillPacketRead)
+    def create_autofill_packet(
+        request: AutofillPacketRequest,
+        session: Annotated[Session, Depends(get_db_session)],
+    ) -> AutofillPacketRead:
+        return AutofillPacketService(
+            session,
+            settings=resolved_settings,
+        ).create_packet(request)
+
+    @app.post("/final-review/packets", response_model=FinalReviewPacketRead)
+    def create_final_review_packet(
+        request: FinalReviewPacketRequest,
+        session: Annotated[Session, Depends(get_db_session)],
+    ) -> FinalReviewPacketRead:
+        return FinalReviewPacketService(
+            session,
+            settings=resolved_settings,
+        ).create_packet(request)
+
+    @app.post("/drafting/runs", response_model=DraftingRunRead)
+    def create_drafting_run(
+        request: DraftingRequest,
+        session: Annotated[Session, Depends(get_db_session)],
+    ) -> DraftingRunRead:
+        try:
+            return DraftingService(
+                session,
+                settings=resolved_settings,
+                provider=drafting_provider,
+            ).create_draft(request)
+        except DraftingSafetyError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.post("/live-discovery/runs", response_model=LiveDiscoveryRun)
+    def create_live_discovery_run(
+        request: LiveDiscoveryRequest,
+        session: Annotated[Session, Depends(get_db_session)],
+    ) -> LiveDiscoveryRun:
+        return live_discovery_service.run(request, session=session)
+
+    @app.get("/live-discovery/runs/{run_id}", response_model=LiveDiscoveryRun)
+    def get_live_discovery_run(run_id: str) -> LiveDiscoveryRun:
+        run = live_discovery_service.get_run(run_id)
+        if run is None:
+            raise HTTPException(status_code=404, detail="Live discovery run not found.")
+        return run
+
+    @app.post("/live-discovery/search-runs", response_model=LiveDiscoveryRun)
+    def create_live_search_discovery_run(
+        request: LiveSearchDiscoveryRequest,
+        session: Annotated[Session, Depends(get_db_session)],
+    ) -> LiveDiscoveryRun:
+        return live_discovery_service.run_search_discovery(request, session=session)
+
+    @app.get("/live-discovery/search-runs/{run_id}", response_model=LiveDiscoveryRun)
+    def get_live_search_discovery_run(run_id: str) -> LiveDiscoveryRun:
+        run = live_discovery_service.get_search_run(run_id)
+        if run is None:
+            raise HTTPException(status_code=404, detail="Live search discovery run not found.")
+        return run
 
     @app.get("/approvals/requests", response_model=list[ApprovalRequestRead])
     def list_approval_requests(

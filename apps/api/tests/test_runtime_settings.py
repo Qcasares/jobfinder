@@ -35,11 +35,116 @@ def test_runtime_settings_expose_safe_posture_without_secret_values() -> None:
     }
     assert {capability.key for capability in runtime.capabilities if not capability.enabled} >= {
         "live_crawling",
+        "live_discovery",
+        "live_search_discovery",
         "llm_calls",
+        "llm_drafting",
         "browser_automation",
+        "autofill_packets",
+        "submission_packets",
         "autofill_submit",
         "real_candidate_data",
+        "candidate_vault",
     }
+
+
+def test_runtime_settings_can_expose_explicit_live_discovery_opt_in() -> None:
+    settings = Settings(live_discovery_enabled=True, live_search_discovery_enabled=True)
+
+    runtime = RuntimeSettingsService(settings).get_status()
+
+    live_discovery = next(
+        capability for capability in runtime.capabilities if capability.key == "live_discovery"
+    )
+    live_search_discovery = next(
+        capability
+        for capability in runtime.capabilities
+        if capability.key == "live_search_discovery"
+    )
+    assert live_discovery.enabled is True
+    assert "explicitly enabled" in live_discovery.detail
+    assert live_search_discovery.enabled is True
+    assert "explicitly enabled" in live_search_discovery.detail
+
+
+def test_runtime_settings_can_expose_candidate_vault_opt_in() -> None:
+    settings = Settings(candidate_vault_enabled=True)
+
+    runtime = RuntimeSettingsService(settings).get_status()
+
+    vault = next(
+        capability for capability in runtime.capabilities if capability.key == "candidate_vault"
+    )
+    real_candidate_data = next(
+        capability
+        for capability in runtime.capabilities
+        if capability.key == "real_candidate_data"
+    )
+    assert vault.enabled is True
+    assert "metadata-only" in vault.detail
+    assert real_candidate_data.enabled is False
+
+
+def test_runtime_settings_can_expose_llm_drafting_opt_in() -> None:
+    settings = Settings(llm_drafting_enabled=True)
+
+    runtime = RuntimeSettingsService(settings).get_status()
+
+    llm_calls = next(
+        capability for capability in runtime.capabilities if capability.key == "llm_calls"
+    )
+    drafting = next(
+        capability for capability in runtime.capabilities if capability.key == "llm_drafting"
+    )
+    browser_automation = next(
+        capability
+        for capability in runtime.capabilities
+        if capability.key == "browser_automation"
+    )
+    assert llm_calls.enabled is True
+    assert drafting.enabled is True
+    assert "review-required" in drafting.detail
+    assert browser_automation.enabled is False
+
+
+def test_runtime_settings_can_expose_autofill_packet_opt_in() -> None:
+    settings = Settings(autofill_packets_enabled=True)
+
+    runtime = RuntimeSettingsService(settings).get_status()
+
+    packets = next(
+        capability for capability in runtime.capabilities if capability.key == "autofill_packets"
+    )
+    browser_automation = next(
+        capability
+        for capability in runtime.capabilities
+        if capability.key == "browser_automation"
+    )
+    submit = next(
+        capability for capability in runtime.capabilities if capability.key == "autofill_submit"
+    )
+    assert packets.enabled is True
+    assert "dry-run" in packets.detail
+    assert browser_automation.enabled is False
+    assert submit.enabled is False
+
+
+def test_runtime_settings_can_expose_submission_packet_opt_in() -> None:
+    settings = Settings(submission_packets_enabled=True)
+
+    runtime = RuntimeSettingsService(settings).get_status()
+
+    packets = next(
+        capability
+        for capability in runtime.capabilities
+        if capability.key == "submission_packets"
+    )
+    submit = next(
+        capability for capability in runtime.capabilities if capability.key == "autofill_submit"
+    )
+    assert packets.enabled is True
+    assert "no external submission" in packets.detail
+    assert submit.enabled is False
 
 
 def test_runtime_settings_endpoint_returns_typed_schema() -> None:
