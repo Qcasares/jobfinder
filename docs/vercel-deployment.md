@@ -85,10 +85,13 @@ Run these locally before pushing a production deployment commit:
 
 ```bash
 pnpm check
+pnpm production:smoke
 cd apps/api && uv run alembic current
 curl -fsS http://127.0.0.1:8000/health
 curl -fsSI http://127.0.0.1:3000/
 ```
+
+After production promotion, run `pnpm production:smoke` again. It verifies the public web page, API health, runtime capability gates, CORS for the operator header, and unauthenticated mutation denial without reading or printing the operator secret.
 
 ## Guardrails
 

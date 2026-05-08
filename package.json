@@ -17,6 +17,7 @@
     "api:lint": "cd apps/api && uv run ruff check .",
     "api:typecheck": "cd apps/api && uv run mypy app tests",
     "operator:live-intake": "node scripts/operator-live-intake.mjs",
+    "production:smoke": "node scripts/production-smoke.mjs",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm client:typecheck && pnpm client:test && pnpm api:lint && pnpm api:typecheck && pnpm api:openapi && pnpm api:test"
   }
 }
