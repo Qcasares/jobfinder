@@ -2,6 +2,12 @@
 
 Use local operator commands for production mutation endpoints. Do not put `JOBFINDER_API_OPERATOR_API_KEY` in browser code, public environment variables, screenshots, logs, or docs.
 
+## Operator Console
+
+Open `https://jobfinder.quentincasares.com`, switch to Administration, then open System Status. The Operator Console signs in with `JOBFINDER_API_OPERATOR_LOGIN_SECRET` and receives a short-lived bearer session for browser handoffs.
+
+Use the console to refresh observability metrics, inspect open manual handoffs, resolve handoffs, and process queued discovery runs. Do not put the login secret in screenshots, docs, shared browser profiles, or public environment variables. The legacy operator API key is for trusted local scripts and release maintenance, not the browser.
+
 ## Live Intake
 
 Run a single approved HTTPS job page:
@@ -26,7 +32,13 @@ curl -fsS https://api.jobfinder.quentincasares.com/manual-handoffs
 
 Create or resolve handoff records only from trusted operator tooling with `x-jobfinder-operator-key`. Do not paste the operator key into browser-visible code, screenshots, or documentation.
 
-## Production Smoke
+## Queued Discovery
+
+Queued discovery records are available through the Operator Console and `/discovery-queue/runs`. Queue processing enforces active-run dedupe, per-source rate limits, retry budgets, and audit events. A run that hits CAPTCHA, bot detection, login walls, identity checks, or access controls must stop as a manual handoff.
+
+## Candidate Document Controls
+
+Candidate document records are metadata only. Use `/candidate/document-records/export` to export metadata for review and `DELETE /candidate/document-records/{record_id}` to remove a record. Jobfinder does not store document bytes, third-party credentials, or inline CV text in this tranche.
 
 ## Production Migrations
 

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Jobfinder">
+  <rect width="64" height="64" rx="14" fill="#312e81"/>
+  <path d="M20 20h24v24H20z" fill="none" stroke="#cbd5e1" stroke-width="4"/>
+  <path d="M26 32h12M32 26v12" stroke="#60a5fa" stroke-width="4" stroke-linecap="round"/>
+</svg>

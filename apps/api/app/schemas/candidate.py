@@ -64,6 +64,22 @@ class CandidateDocumentRecordRead(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class CandidateDocumentExportRead(BaseModel):
+    records: list[CandidateDocumentRecordRead]
+    content_included: Literal[False] = False
+    export_note: str
+
+    model_config = ConfigDict(frozen=True)
+
+
+class CandidateDocumentDeleteRead(BaseModel):
+    id: str
+    deleted: bool
+    content_deleted: Literal[False] = False
+
+    model_config = ConfigDict(frozen=True)
+
+
 class SearchCriteriaRead(BaseModel):
     id: str
     user_id: str

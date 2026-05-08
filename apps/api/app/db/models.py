@@ -326,6 +326,37 @@ class ManualHandoffRecord(Base):
     resolution_notes: Mapped[str | None] = mapped_column(Text())
 
 
+class DiscoveryQueueRun(Base):
+    __tablename__ = "discovery_queue_runs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    mode: Mapped[str] = mapped_column(String(20), nullable=False)
+    url: Mapped[str] = mapped_column(Text(), nullable=False)
+    source_domain: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    requested_by: Mapped[str] = mapped_column(String(200), nullable=False)
+    status: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
+    max_results: Mapped[int] = mapped_column(default=25, nullable=False)
+    attempts: Mapped[int] = mapped_column(default=0, nullable=False)
+    max_attempts: Mapped[int] = mapped_column(default=3, nullable=False)
+    rate_limit_after: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    live_run_id: Mapped[str | None] = mapped_column(String(36), index=True)
+    manual_handoff_id: Mapped[str | None] = mapped_column(String(36), index=True)
+    failure_reason: Mapped[str | None] = mapped_column(String(120))
+    failure_detail: Mapped[str | None] = mapped_column(Text())
+    discovered_urls: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    review_item_ids: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
+    )
+
+    __table_args__ = (
+        Index("ix_discovery_queue_runs_domain_created", "source_domain", "created_at"),
+    )
+
+
 class ApprovalRequest(Base):
     __tablename__ = "approval_requests"
 

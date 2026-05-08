@@ -19,6 +19,21 @@ class Settings(BaseSettings):
         default="",
         validation_alias=AliasChoices("JOBFINDER_API_OPERATOR_API_KEY", "OPERATOR_API_KEY"),
     )
+    operator_login_secret: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "JOBFINDER_API_OPERATOR_LOGIN_SECRET",
+            "OPERATOR_LOGIN_SECRET",
+        ),
+    )
+    operator_token_secret: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "JOBFINDER_API_OPERATOR_TOKEN_SECRET",
+            "OPERATOR_TOKEN_SECRET",
+        ),
+    )
+    operator_token_ttl_seconds: int = Field(default=28_800, ge=300, le=86_400)
     audit_schema_version: int = Field(default=1, ge=1)
     write_api_enabled: bool = Field(default=False)
     live_discovery_enabled: bool = Field(default=False)
@@ -65,6 +80,10 @@ class Settings(BaseSettings):
     @property
     def operator_auth_configured(self) -> bool:
         return bool(self.operator_api_key)
+
+    @property
+    def operator_session_auth_configured(self) -> bool:
+        return bool(self.operator_login_secret and self.operator_token_secret)
 
 
 @lru_cache

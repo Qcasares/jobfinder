@@ -25,6 +25,8 @@ Required production environment variables:
 JOBFINDER_API_ENVIRONMENT=production
 JOBFINDER_API_WRITE_API_ENABLED=true
 JOBFINDER_API_OPERATOR_API_KEY=<strong-random-operator-secret>
+JOBFINDER_API_OPERATOR_LOGIN_SECRET=<strong-random-operator-login-secret>
+JOBFINDER_API_OPERATOR_TOKEN_SECRET=<strong-random-token-signing-secret>
 JOBFINDER_API_LIVE_DISCOVERY_ENABLED=true
 JOBFINDER_API_LIVE_SEARCH_DISCOVERY_ENABLED=true
 JOBFINDER_API_LIVE_DISCOVERY_TIMEOUT_SECONDS=8
@@ -40,7 +42,7 @@ JOBFINDER_API_CORS_ALLOWED_ORIGINS=["https://jobfinder.quentincasares.com","http
 
 Do not deploy the API without a managed Postgres database. The local default database URL points at Docker Compose and is not valid in Vercel. Redis is included for future readiness but no queue worker depends on it in this tranche.
 
-Production mutation endpoints require `x-jobfinder-operator-key` to match `JOBFINDER_API_OPERATOR_API_KEY`; do not enable live capability flags unless that secret is configured. Each flag unlocks only its governed API surface and still stops before external submission. Browser execution, credential capture, LLM drafting, and submit/autofill execution remain disabled.
+Production mutation endpoints accept signed bearer sessions created from `JOBFINDER_API_OPERATOR_LOGIN_SECRET` and signed by `JOBFINDER_API_OPERATOR_TOKEN_SECRET`. The legacy `x-jobfinder-operator-key` remains available only for bootstrap tooling and migrations. Do not enable live capability flags unless those secrets are configured. Each flag unlocks only its governed API surface and still stops before external submission. Browser execution, credential capture, LLM drafting, and submit/autofill execution remain disabled.
 Manual-handoff records are always exposed as the safe stop path for CAPTCHA, bot-detection, login-only, identity-check, and access-control pages. Creating or resolving those records is also operator-key gated in production.
 
 Run database migrations against the production database before promoting traffic:
@@ -84,8 +86,8 @@ The dashboard page is marked dynamic so Vercel renders it per request and reads 
 5. Deploy the API and verify `/health` and `/settings/runtime`.
 6. Create or connect the web project in Vercel with root directory `apps/web`.
 7. Set `NEXT_PUBLIC_API_BASE_URL` to the API production URL.
-8. Deploy the web project and verify the dashboard shows `API data` and the current live capability states.
-9. Use `docs/operator-runbook.md` for production live-intake commands; do not place the operator key in browser-visible configuration.
+8. Deploy the web project and verify the dashboard shows `API data`, the Operator Console, and the current live capability states.
+9. Use `docs/operator-runbook.md` for production live-intake commands and browser handoffs; do not place the operator key or login secret in public configuration, screenshots, logs, or docs.
 
 ## Preflight Checks
 
@@ -99,12 +101,13 @@ curl -fsS http://127.0.0.1:8000/health
 curl -fsSI http://127.0.0.1:3000/
 ```
 
-After production promotion, run `pnpm production:smoke` again. It verifies the public web page, API health, runtime capability gates, CORS for the operator header, unauthenticated live mutation denial, and unauthenticated handoff mutation denial without reading or printing the operator secret.
+After production promotion, run `pnpm production:smoke` again. It verifies the public web page, API health, runtime capability gates, CORS for operator headers, unauthenticated live mutation denial, and unauthenticated handoff mutation denial without reading or printing operator secrets.
 
 ## Guardrails
 
 - Only governed live surfaces should be deployed: bounded approved-source discovery, metadata-only candidate document records, evidence-backed draft packets, dry-run autofill packets, and final-review packets.
-- Keep production mutation endpoints behind the operator API key until a full auth provider replaces it.
+- Keep production mutation endpoints behind signed operator sessions or trusted bootstrap tooling until a full external auth provider replaces them.
+- Use the Operator Console for manual handoffs, queued discovery processing, and observability review.
 - Do not add CAPTCHA bypass, bot-detection bypass, login automation, third-party credential storage, real browser autofill, or external application submission without a separate approval-gated design.
 - Keep real candidate data out of fixtures, docs, and seed data.
 - Keep `NEXT_PUBLIC_API_BASE_URL` as the only client-exposed API setting.

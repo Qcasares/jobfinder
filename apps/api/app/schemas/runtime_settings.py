@@ -9,6 +9,7 @@ RuntimeCapabilityKey = Literal[
     "audit_hash_chain",
     "single_user_local_mode",
     "operator_api_key",
+    "operator_session_auth",
     "write_api",
     "live_crawling",
     "live_discovery",

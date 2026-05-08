@@ -716,6 +716,57 @@
         "title": "AutofillPacketSafety",
         "type": "object"
       },
+      "CandidateDocumentDeleteRead": {
+        "properties": {
+          "content_deleted": {
+            "const": false,
+            "default": false,
+            "title": "Content Deleted",
+            "type": "boolean"
+          },
+          "deleted": {
+            "title": "Deleted",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "deleted"
+        ],
+        "title": "CandidateDocumentDeleteRead",
+        "type": "object"
+      },
+      "CandidateDocumentExportRead": {
+        "properties": {
+          "content_included": {
+            "const": false,
+            "default": false,
+            "title": "Content Included",
+            "type": "boolean"
+          },
+          "export_note": {
+            "title": "Export Note",
+            "type": "string"
+          },
+          "records": {
+            "items": {
+              "$ref": "#/components/schemas/CandidateDocumentRecordRead"
+            },
+            "title": "Records",
+            "type": "array"
+          }
+        },
+        "required": [
+          "records",
+          "export_note"
+        ],
+        "title": "CandidateDocumentExportRead",
+        "type": "object"
+      },
       "CandidateDocumentRecordCreate": {
         "properties": {
           "byte_size": {
@@ -1252,6 +1303,219 @@
           "audit_feed"
         ],
         "title": "DashboardSummary",
+        "type": "object"
+      },
+      "DiscoveryQueueRunCreate": {
+        "properties": {
+          "max_attempts": {
+            "default": 3,
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Max Attempts",
+            "type": "integer"
+          },
+          "max_results": {
+            "default": 25,
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Max Results",
+            "type": "integer"
+          },
+          "mode": {
+            "default": "job",
+            "enum": [
+              "job",
+              "search"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "requested_by": {
+            "default": "operator",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Requested By",
+            "type": "string"
+          },
+          "source_domain": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Domain"
+          },
+          "url": {
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "DiscoveryQueueRunCreate",
+        "type": "object"
+      },
+      "DiscoveryQueueRunRead": {
+        "properties": {
+          "attempts": {
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "discovered_urls": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Discovered Urls",
+            "type": "array"
+          },
+          "failure_detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Detail"
+          },
+          "failure_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Reason"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "live_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Live Run Id"
+          },
+          "manual_handoff_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manual Handoff Id"
+          },
+          "max_attempts": {
+            "title": "Max Attempts",
+            "type": "integer"
+          },
+          "max_results": {
+            "title": "Max Results",
+            "type": "integer"
+          },
+          "mode": {
+            "enum": [
+              "job",
+              "search"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "rate_limit_after": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Limit After"
+          },
+          "requested_by": {
+            "title": "Requested By",
+            "type": "string"
+          },
+          "review_item_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Review Item Ids",
+            "type": "array"
+          },
+          "source_domain": {
+            "title": "Source Domain",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "queued",
+              "rate_limited",
+              "running",
+              "completed",
+              "failed",
+              "manual_handoff_required"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "mode",
+          "url",
+          "source_domain",
+          "requested_by",
+          "status",
+          "max_results",
+          "attempts",
+          "max_attempts",
+          "rate_limit_after",
+          "live_run_id",
+          "manual_handoff_id",
+          "failure_reason",
+          "failure_detail",
+          "discovered_urls",
+          "review_item_ids",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "DiscoveryQueueRunRead",
         "type": "object"
       },
       "DraftingClaimMapping": {
@@ -2369,6 +2633,116 @@
         "title": "MigrationUpgradeRead",
         "type": "object"
       },
+      "ObservabilitySummaryRead": {
+        "properties": {
+          "audit_chain_valid": {
+            "title": "Audit Chain Valid",
+            "type": "boolean"
+          },
+          "error_events": {
+            "minimum": 0.0,
+            "title": "Error Events",
+            "type": "integer"
+          },
+          "failed_discovery_runs": {
+            "minimum": 0.0,
+            "title": "Failed Discovery Runs",
+            "type": "integer"
+          },
+          "latest_audit_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Audit Hash"
+          },
+          "open_manual_handoffs": {
+            "minimum": 0.0,
+            "title": "Open Manual Handoffs",
+            "type": "integer"
+          },
+          "queued_discovery_runs": {
+            "minimum": 0.0,
+            "title": "Queued Discovery Runs",
+            "type": "integer"
+          },
+          "total_audit_events": {
+            "minimum": 0.0,
+            "title": "Total Audit Events",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_audit_events",
+          "error_events",
+          "open_manual_handoffs",
+          "queued_discovery_runs",
+          "failed_discovery_runs",
+          "audit_chain_valid",
+          "latest_audit_hash"
+        ],
+        "title": "ObservabilitySummaryRead",
+        "type": "object"
+      },
+      "OperatorTokenRead": {
+        "properties": {
+          "access_token": {
+            "title": "Access Token",
+            "type": "string"
+          },
+          "actor_id": {
+            "title": "Actor Id",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "role": {
+            "default": "operator",
+            "title": "Role",
+            "type": "string"
+          },
+          "token_type": {
+            "default": "bearer",
+            "title": "Token Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "access_token",
+          "actor_id",
+          "expires_at"
+        ],
+        "title": "OperatorTokenRead",
+        "type": "object"
+      },
+      "OperatorTokenRequest": {
+        "properties": {
+          "actor_id": {
+            "default": "operator",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Actor Id",
+            "type": "string"
+          },
+          "login_secret": {
+            "minLength": 1,
+            "title": "Login Secret",
+            "type": "string"
+          }
+        },
+        "required": [
+          "login_secret"
+        ],
+        "title": "OperatorTokenRequest",
+        "type": "object"
+      },
       "PolicyAction": {
         "enum": [
           "discover",
@@ -2724,6 +3098,7 @@
               "audit_hash_chain",
               "single_user_local_mode",
               "operator_api_key",
+              "operator_session_auth",
               "write_api",
               "live_crawling",
               "live_discovery",
@@ -2974,6 +3349,55 @@
         "title": "SearchCriteriaRead",
         "type": "object"
       },
+      "SourcePolicyAttachRequest": {
+        "properties": {
+          "allowed_actions": {
+            "items": {
+              "$ref": "#/components/schemas/PolicyAction"
+            },
+            "title": "Allowed Actions",
+            "type": "array"
+          },
+          "denied_actions": {
+            "items": {
+              "$ref": "#/components/schemas/PolicyAction"
+            },
+            "title": "Denied Actions",
+            "type": "array"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/SourcePolicyEvidenceCreate"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "reason": {
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "source_id": {
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Source Id",
+            "type": "string"
+          },
+          "status": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_id",
+          "status",
+          "reason"
+        ],
+        "title": "SourcePolicyAttachRequest",
+        "type": "object"
+      },
       "SourcePolicyCheckRequest": {
         "properties": {
           "action": {
@@ -3010,6 +3434,56 @@
           "action"
         ],
         "title": "SourcePolicyCheckRequest",
+        "type": "object"
+      },
+      "SourcePolicyEvidenceCreate": {
+        "properties": {
+          "evidence_type": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Evidence Type",
+            "type": "string"
+          },
+          "excerpt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Excerpt"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "evidence_type"
+        ],
+        "title": "SourcePolicyEvidenceCreate",
         "type": "object"
       },
       "SourcePolicyEvidenceRead": {
@@ -3623,6 +4097,44 @@
         "summary": "Verify Audit Chain"
       }
     },
+    "/auth/operator-token": {
+      "post": {
+        "operationId": "create_operator_session_auth_operator_token_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OperatorTokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperatorTokenRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Operator Session"
+      }
+    },
     "/autofill/packets": {
       "post": {
         "operationId": "create_autofill_packet_autofill_packets_post",
@@ -3662,6 +4174,26 @@
       }
     },
     "/candidate/document-records": {
+      "get": {
+        "operationId": "list_candidate_document_records_candidate_document_records_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CandidateDocumentRecordRead"
+                  },
+                  "title": "Response List Candidate Document Records Candidate Document Records Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Candidate Document Records"
+      },
       "post": {
         "operationId": "create_candidate_document_record_candidate_document_records_post",
         "requestBody": {
@@ -3697,6 +4229,63 @@
           }
         },
         "summary": "Create Candidate Document Record"
+      }
+    },
+    "/candidate/document-records/export": {
+      "get": {
+        "operationId": "export_candidate_document_records_candidate_document_records_export_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateDocumentExportRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Export Candidate Document Records"
+      }
+    },
+    "/candidate/document-records/{record_id}": {
+      "delete": {
+        "operationId": "delete_candidate_document_record_candidate_document_records__record_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "title": "Record Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateDocumentDeleteRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Candidate Document Record"
       }
     },
     "/candidate/evidence": {
@@ -3847,6 +4436,127 @@
           }
         },
         "summary": "Dashboard Summary"
+      }
+    },
+    "/discovery-queue/runs": {
+      "get": {
+        "operationId": "list_discovery_queue_runs_discovery_queue_runs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DiscoveryQueueRunRead"
+                  },
+                  "title": "Response List Discovery Queue Runs Discovery Queue Runs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Discovery Queue Runs"
+      },
+      "post": {
+        "operationId": "enqueue_discovery_queue_run_discovery_queue_runs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiscoveryQueueRunCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscoveryQueueRunRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Enqueue Discovery Queue Run"
+      }
+    },
+    "/discovery-queue/runs/{run_id}/process": {
+      "post": {
+        "operationId": "process_discovery_queue_run_discovery_queue_runs__run_id__process_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscoveryQueueRunRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Process Discovery Queue Run"
       }
     },
     "/drafting/runs": {
@@ -4321,6 +5031,24 @@
         "summary": "Resolve Manual Handoff"
       }
     },
+    "/observability/summary": {
+      "get": {
+        "operationId": "observability_summary_observability_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservabilitySummaryRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Observability Summary"
+      }
+    },
     "/review/queue": {
       "get": {
         "operationId": "review_queue_review_queue_get",
@@ -4426,6 +5154,42 @@
           }
         },
         "summary": "List Source Policies"
+      },
+      "post": {
+        "operationId": "attach_source_policy_source_policies_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourcePolicyAttachRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourcePolicyRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Attach Source Policy"
       }
     },
     "/source-policies/check": {

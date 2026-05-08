@@ -47,6 +47,21 @@ import {
   type LiveDiscoveryRun
 } from "@/lib/live-discovery-data";
 import {
+  attachSourcePolicy,
+  createOperatorToken,
+  getDiscoveryQueueRuns,
+  getManualHandoffs,
+  getObservabilitySummary,
+  getSourceRecords,
+  processDiscoveryQueueRun,
+  resolveManualHandoff,
+  type DiscoveryQueueRun,
+  type ManualHandoff,
+  type ObservabilitySummary,
+  type OperatorToken,
+  type SourceRecord
+} from "@/lib/operator-control-data";
+import {
   dashboardData,
   evaluateSourcePolicyLocally,
   getPipelineTotal,
@@ -789,6 +804,7 @@ function SystemStatusWorkspace({
   return (
     <div className="grid gap-4 p-4 sm:p-6 xl:grid-cols-[1.55fr_0.95fr]">
       <section className="grid gap-4">
+        <OperatorConsolePanel runtime={settingsSnapshot.runtime} />
         <LiveIntakePanel runtime={settingsSnapshot.runtime} />
         <RuntimeCapabilityPanel capabilities={settingsSnapshot.runtime.capabilities} />
         <RuntimeSettingsPanel snapshot={settingsSnapshot} />
@@ -860,6 +876,7 @@ function SourcesWorkspace({
         <SourceRegistryPanel policies={policies} />
       </section>
       <section className="grid content-start gap-4">
+        <SourcePolicyReviewPanel />
         <PolicyCheckPanel policies={policies} />
         <HealthPanel health={health} />
         <GuardrailPanel />
@@ -933,6 +950,192 @@ function SourceRegistryPanel({ policies }: { policies: readonly SourcePolicy[] }
             ))}
           </tbody>
         </table>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SourcePolicyReviewPanel() {
+  const [actorId, setActorId] = useState("source-reviewer");
+  const [loginSecret, setLoginSecret] = useState("");
+  const [sources, setSources] = useState<SourceRecord[]>([]);
+  const [selectedSourceId, setSelectedSourceId] = useState("");
+  const [status, setStatus] = useState("manual_only");
+  const [allowedActions, setAllowedActions] = useState<SourcePolicyAction[]>(["extract"]);
+  const [reason, setReason] = useState("Reviewed from operator console.");
+  const [message, setMessage] = useState<string | null>(null);
+  const [isBusy, setIsBusy] = useState(false);
+
+  async function handleRefreshSources() {
+    setIsBusy(true);
+    setMessage(null);
+    try {
+      const records = await getSourceRecords();
+      setSources(records);
+      setSelectedSourceId((current) => current || records[0]?.id || "");
+      setMessage(`Loaded ${records.length} sources.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not load sources.");
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  async function handleAttachPolicy(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const selected = sources.find((source) => source.id === selectedSourceId);
+    const deniedActions = sourcePolicyActions.filter((action) => !allowedActions.includes(action));
+    setIsBusy(true);
+    setMessage(null);
+    try {
+      if (!selected) {
+        throw new Error("Select a source before attaching a policy.");
+      }
+      const token = await createOperatorToken(loginSecret, actorId);
+      await attachSourcePolicy(token.accessToken, {
+        sourceId: selected.id,
+        status,
+        reason,
+        allowedActions,
+        deniedActions
+      });
+      setMessage(`Policy attached to ${selected.domain}.`);
+      const records = await getSourceRecords();
+      setSources(records);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not attach source policy.");
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  function toggleAllowedAction(action: SourcePolicyAction) {
+    setAllowedActions((current) =>
+      current.includes(action)
+        ? current.filter((candidate) => candidate !== action)
+        : [...current, action]
+    );
+  }
+
+  const selectedSource = sources.find((source) => source.id === selectedSourceId);
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between gap-3">
+        <div>
+          <CardTitle>Source Policy Review</CardTitle>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Attach reviewed policies to registered sources.
+          </p>
+        </div>
+        <Badge tone="info">operator</Badge>
+      </CardHeader>
+      <CardContent>
+        <form className="grid gap-4" onSubmit={handleAttachPolicy}>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-2 text-sm font-medium">
+              <span>Actor</span>
+              <input
+                value={actorId}
+                onChange={(event) => setActorId(event.currentTarget.value)}
+                autoComplete="username"
+                className="h-10 rounded-md border border-border bg-white px-3 text-sm"
+              />
+            </label>
+            <label className="grid gap-2 text-sm font-medium">
+              <span>Login secret</span>
+              <input
+                type="password"
+                value={loginSecret}
+                onChange={(event) => setLoginSecret(event.currentTarget.value)}
+                autoComplete="current-password"
+                className="h-10 rounded-md border border-border bg-white px-3 text-sm"
+              />
+            </label>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+            <label className="grid gap-2 text-sm font-medium">
+              <span>Source</span>
+              <select
+                value={selectedSourceId}
+                onChange={(event) => setSelectedSourceId(event.currentTarget.value)}
+                className="h-10 rounded-md border border-border bg-white px-3 text-sm"
+              >
+                {sources.length === 0 ? <option value="">Refresh sources</option> : null}
+                {sources.map((source) => (
+                  <option key={source.id} value={source.id}>
+                    {source.name} - {source.domain}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              onClick={handleRefreshSources}
+              disabled={isBusy}
+              className="inline-flex h-10 items-center justify-center gap-2 self-end rounded-md border border-border bg-white px-3 text-sm font-semibold disabled:cursor-wait disabled:opacity-70"
+            >
+              <RefreshCcw className={cn("size-4", isBusy && "animate-spin")} aria-hidden="true" />
+              Refresh
+            </button>
+          </div>
+          {selectedSource ? (
+            <div className="rounded-md border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+              <p className="font-mono">{selectedSource.sourceType}</p>
+              <p className="mt-1">Current policy: {selectedSource.policyStatus ?? "none"}</p>
+            </div>
+          ) : null}
+          <label className="grid gap-2 text-sm font-medium">
+            <span>Status</span>
+            <select
+              value={status}
+              onChange={(event) => setStatus(event.currentTarget.value)}
+              className="h-10 rounded-md border border-border bg-white px-3 text-sm"
+            >
+              <option value="allowed">allowed</option>
+              <option value="manual_only">manual only</option>
+              <option value="blocked">blocked</option>
+            </select>
+          </label>
+          <fieldset className="grid gap-2">
+            <legend className="text-sm font-medium">Allowed actions</legend>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {sourcePolicyActions.map((action) => (
+                <label key={action} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={allowedActions.includes(action)}
+                    onChange={() => toggleAllowedAction(action)}
+                    className="size-4 rounded border-border"
+                  />
+                  <span>{action}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <label className="grid gap-2 text-sm font-medium">
+            <span>Reason</span>
+            <textarea
+              value={reason}
+              onChange={(event) => setReason(event.currentTarget.value)}
+              rows={3}
+              className="rounded-md border border-border bg-white px-3 py-2 text-sm"
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={isBusy || !loginSecret || !selectedSourceId || !reason}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            <ShieldCheck className="size-4" aria-hidden="true" />
+            Attach policy
+          </button>
+        </form>
+        {message ? (
+          <p className="mt-3 rounded-md border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
+            {message}
+          </p>
+        ) : null}
       </CardContent>
     </Card>
   );
@@ -1656,6 +1859,257 @@ function ApplicationTable({ applications }: { applications: readonly Application
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function OperatorConsolePanel({ runtime }: { runtime: RuntimeSettings }) {
+  const sessionAuthEnabled = isCapabilityEnabled(runtime.capabilities, "operator_session_auth");
+  const [actorId, setActorId] = useState("dashboard-operator");
+  const [loginSecret, setLoginSecret] = useState("");
+  const [token, setToken] = useState<OperatorToken | null>(null);
+  const [handoffs, setHandoffs] = useState<ManualHandoff[]>([]);
+  const [queueRuns, setQueueRuns] = useState<DiscoveryQueueRun[]>([]);
+  const [observability, setObservability] = useState<ObservabilitySummary | null>(null);
+  const [statusText, setStatusText] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function refreshConsole() {
+    setLoading(true);
+    setStatusText(null);
+    try {
+      const [handoffPayload, queuePayload, observabilityPayload] = await Promise.all([
+        getManualHandoffs(),
+        getDiscoveryQueueRuns(),
+        getObservabilitySummary()
+      ]);
+      setHandoffs(handoffPayload);
+      setQueueRuns(queuePayload);
+      setObservability(observabilityPayload);
+    } catch (caught) {
+      setStatusText(caught instanceof Error ? caught.message : "Operator console refresh failed.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleLogin(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLoading(true);
+    setStatusText(null);
+    try {
+      const nextToken = await createOperatorToken(loginSecret, actorId);
+      setToken(nextToken);
+      setLoginSecret("");
+      setStatusText(`Session active until ${new Date(nextToken.expiresAt).toLocaleString()}.`);
+    } catch (caught) {
+      setStatusText(caught instanceof Error ? caught.message : "Operator login failed.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleResolve(recordId: string) {
+    if (!token) {
+      setStatusText("Sign in with an operator session before resolving handoffs.");
+      return;
+    }
+    setLoading(true);
+    try {
+      await resolveManualHandoff(token.accessToken, recordId, token.actorId);
+      await refreshConsole();
+    } catch (caught) {
+      setStatusText(caught instanceof Error ? caught.message : "Handoff resolve failed.");
+      setLoading(false);
+    }
+  }
+
+  async function handleProcess(runId: string) {
+    if (!token) {
+      setStatusText("Sign in with an operator session before processing queued runs.");
+      return;
+    }
+    setLoading(true);
+    try {
+      await processDiscoveryQueueRun(token.accessToken, runId);
+      await refreshConsole();
+    } catch (caught) {
+      setStatusText(caught instanceof Error ? caught.message : "Queue processing failed.");
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <CardTitle>Operator Console</CardTitle>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Resolve handoffs, process queued discovery, and inspect live operational health.
+          </p>
+        </div>
+        <Badge tone={sessionAuthEnabled ? "success" : "warning"}>
+          {sessionAuthEnabled ? "session auth" : "legacy auth"}
+        </Badge>
+      </CardHeader>
+      <CardContent className="grid gap-4">
+        <form className="grid gap-3 md:grid-cols-[0.9fr_1fr_auto]" onSubmit={handleLogin}>
+          <label className="grid gap-1 text-sm font-medium">
+            Actor
+            <input
+              value={actorId}
+              onChange={(event) => setActorId(event.target.value)}
+              autoComplete="username"
+              className="h-10 rounded-md border border-border bg-white px-3 text-sm font-normal outline-none focus:border-primary"
+            />
+          </label>
+          <label className="grid gap-1 text-sm font-medium">
+            Login secret
+            <input
+              type="password"
+              value={loginSecret}
+              onChange={(event) => setLoginSecret(event.target.value)}
+              autoComplete="current-password"
+              className="h-10 rounded-md border border-border bg-white px-3 text-sm font-normal outline-none focus:border-primary"
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={loading || !loginSecret.trim()}
+            className="inline-flex h-10 items-center justify-center gap-2 self-end rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+          >
+            <LockKeyhole className="size-4" aria-hidden="true" />
+            Sign in
+          </button>
+        </form>
+        <div className="grid gap-2 sm:grid-cols-5">
+          <MetricTile label="Open Handoffs" value={observability?.openManualHandoffs ?? 0} />
+          <MetricTile label="Queued Runs" value={observability?.queuedDiscoveryRuns ?? 0} />
+          <MetricTile label="Failed Runs" value={observability?.failedDiscoveryRuns ?? 0} />
+          <MetricTile label="Audit Events" value={observability?.totalAuditEvents ?? 0} />
+          <MetricTile label="Errors" value={observability?.errorEvents ?? 0} />
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void refreshConsole()}
+            disabled={loading}
+            className="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-white px-3 text-sm font-medium text-foreground disabled:opacity-60"
+          >
+            <RefreshCcw className={cn("size-4", loading && "animate-spin")} aria-hidden="true" />
+            Refresh
+          </button>
+          <Badge tone={token ? "success" : "neutral"}>{token ? "signed in" : "read only"}</Badge>
+          {observability ? (
+            <Badge tone={observability.auditChainValid ? "success" : "danger"}>
+              audit {observability.auditChainValid ? "valid" : "invalid"}
+            </Badge>
+          ) : null}
+        </div>
+        {statusText ? (
+          <p className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+            {statusText}
+          </p>
+        ) : null}
+        <div className="grid gap-4 xl:grid-cols-2">
+          <OperatorHandoffList
+            handoffs={handoffs}
+            canMutate={Boolean(token)}
+            onResolve={handleResolve}
+          />
+          <OperatorQueueList
+            runs={queueRuns}
+            canMutate={Boolean(token)}
+            onProcess={handleProcess}
+          />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function OperatorHandoffList({
+  handoffs,
+  canMutate,
+  onResolve
+}: {
+  handoffs: readonly ManualHandoff[];
+  canMutate: boolean;
+  onResolve: (recordId: string) => void;
+}) {
+  return (
+    <div className="rounded-md border border-border">
+      <div className="border-b border-border px-3 py-2">
+        <p className="text-sm font-semibold">Manual Handoffs</p>
+      </div>
+      <div className="grid max-h-80 gap-2 overflow-auto p-3">
+        {handoffs.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No open handoffs.</p>
+        ) : (
+          handoffs.map((handoff) => (
+            <div key={handoff.id} className="rounded-md bg-muted/50 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <Badge tone="warning">{handoff.triggerType}</Badge>
+                <button
+                  type="button"
+                  disabled={!canMutate}
+                  onClick={() => onResolve(handoff.id)}
+                  className="h-8 rounded-md border border-border bg-white px-3 text-xs font-semibold text-foreground disabled:opacity-50"
+                >
+                  Resolve
+                </button>
+              </div>
+              <p className="mt-2 truncate font-mono text-xs text-muted-foreground">{handoff.url}</p>
+              <p className="mt-2 text-sm leading-5 text-muted-foreground">
+                {handoff.detectionDetail}
+              </p>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function OperatorQueueList({
+  runs,
+  canMutate,
+  onProcess
+}: {
+  runs: readonly DiscoveryQueueRun[];
+  canMutate: boolean;
+  onProcess: (runId: string) => void;
+}) {
+  return (
+    <div className="rounded-md border border-border">
+      <div className="border-b border-border px-3 py-2">
+        <p className="text-sm font-semibold">Discovery Queue</p>
+      </div>
+      <div className="grid max-h-80 gap-2 overflow-auto p-3">
+        {runs.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No queued discovery runs.</p>
+        ) : (
+          runs.map((run) => (
+            <div key={run.id} className="rounded-md bg-muted/50 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <Badge tone={run.status === "failed" ? "danger" : "info"}>{run.status}</Badge>
+                <button
+                  type="button"
+                  disabled={!canMutate || run.status === "completed"}
+                  onClick={() => onProcess(run.id)}
+                  className="h-8 rounded-md border border-border bg-white px-3 text-xs font-semibold text-foreground disabled:opacity-50"
+                >
+                  Process
+                </button>
+              </div>
+              <p className="mt-2 truncate font-mono text-xs text-muted-foreground">{run.url}</p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {run.mode} / attempts {run.attempts}/{run.maxAttempts}
+              </p>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
   );
 }
 

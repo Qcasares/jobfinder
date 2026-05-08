@@ -78,6 +78,15 @@ class SourcePolicyCheckResponse(PolicyDecision):
     pass
 
 
+class SourcePolicyAttachRequest(BaseModel):
+    source_id: str = Field(min_length=1, max_length=36)
+    status: str = Field(min_length=1, max_length=40)
+    reason: str = Field(min_length=1)
+    allowed_actions: list[PolicyAction] = Field(default_factory=list)
+    denied_actions: list[PolicyAction] = Field(default_factory=list)
+    evidence: list[SourcePolicyEvidenceCreate] = Field(default_factory=list)
+
+
 def actions_from_raw(raw_actions: list[str]) -> list[PolicyAction]:
     return [PolicyAction(action) for action in raw_actions]
 

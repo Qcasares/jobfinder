@@ -10,13 +10,17 @@ Implemented. Operators submit one approved HTTPS job URL through the local opera
 
 Implemented. Operators can submit one approved HTTPS search-result page through the local operator command. The API requires the production operator key, applies the same source-policy checks, keeps discovery same-domain, enforces a result budget, and records auditable run metadata. Prohibited platforms and unknown sources stay blocked.
 
-Next controls before queued crawling: durable job queue, per-source rate limits, retry/backoff limits, robots/terms evidence refresh, dedupe across runs, and dashboard review for discovered URLs.
+Queued discovery is now implemented as an operator-controlled queue with active-run dedupe, per-source rate limits, retry limits, run history, and process audit events. The dashboard Operator Console exposes queue status and processing.
+
+Next controls before broader crawling: background worker execution, robots/terms evidence refresh, source-specific budgets, and richer dashboard review for discovered URLs.
 
 ## Phase C: Candidate Vault And Evidence Controls
 
 Initial implementation: Jobfinder can register metadata-only candidate document records behind `JOBFINDER_API_CANDIDATE_VAULT_ENABLED=true`. Records require a `vault://` storage reference, content hash, byte size, MIME type, consent scope, and retention period. The app database does not store document bytes, third-party credentials, or inline CV text. Redaction starts as pending and extraction approval is false by default.
 
-Next controls before document content can drive workflow: encrypted object storage integration, delete/export endpoints, redaction review, approved evidence extraction, and UI review for vault records. No model prompts or application fields should receive document content unless evidence records are approved.
+Metadata export and delete controls are implemented through the API. Deletion removes the app database record and emits audit metadata; document-byte deletion remains the responsibility of the external encrypted object store because Jobfinder does not store bytes.
+
+Next controls before document content can drive workflow: encrypted object storage integration, redaction review, approved evidence extraction, and UI review for vault records. No model prompts or application fields should receive document content unless evidence records are approved.
 
 ## Phase D: LLM-Assisted Drafting
 
@@ -40,4 +44,10 @@ Next controls before actual submission: final packet approval workflow, action-t
 
 Implemented stop-condition records. Live discovery and search-result discovery detect CAPTCHA, bot-detection, login-only, and access-control pages as terminal stop conditions. The API creates persistent manual handoff records, links them to the run, and emits audit events. It does not bypass, authenticate, store credentials, autofill, or submit.
 
+Operator Console handoffs are implemented. Operators can sign in with a short-lived bearer session, inspect open handoffs, resolve records, and process queued discovery without pasting the legacy operator API key into browser-visible configuration.
+
 Deferred until a separate approval-gated design: first-party user authorization, secure token or credential storage, revocation, least-privilege access, and log redaction for sources that explicitly support authenticated access.
+
+## Cross-Cutting Control Plane
+
+Implemented. `/observability/summary` exposes audit count, error count, open handoffs, queued and failed discovery, and hash-chain status. `/source-policies` can attach reviewed policies to sources from trusted operator surfaces. Signed operator sessions are preferred for browser operations; the legacy API key remains for local bootstrap and migration scripts.

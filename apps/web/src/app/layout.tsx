@@ -3,7 +3,10 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Jobfinder Operations",
-  description: "Governed job-search operations dashboard"
+  description: "Governed job-search operations dashboard",
+  icons: {
+    icon: "/favicon.svg"
+  }
 };
 
 export default function RootLayout({

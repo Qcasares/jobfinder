@@ -23,8 +23,11 @@ from app.schemas.audit_explorer import (
     AuditExplorerEvent,
     AuditExplorerSummary,
 )
+from app.schemas.auth import OperatorTokenRead, OperatorTokenRequest
 from app.schemas.autofill import AutofillPacketRead, AutofillPacketRequest
 from app.schemas.candidate import (
+    CandidateDocumentDeleteRead,
+    CandidateDocumentExportRead,
     CandidateDocumentRecordCreate,
     CandidateDocumentRecordRead,
     CandidateEvidenceCreate,
@@ -36,6 +39,7 @@ from app.schemas.candidate import (
     SearchCriteriaRead,
 )
 from app.schemas.dashboard import DashboardSummary
+from app.schemas.discovery_queue import DiscoveryQueueRunCreate, DiscoveryQueueRunRead
 from app.schemas.drafting import DraftingRequest, DraftingRunRead
 from app.schemas.final_review import FinalReviewPacketRead, FinalReviewPacketRequest
 from app.schemas.health import HealthResponse
@@ -52,10 +56,12 @@ from app.schemas.manual_handoff import (
     ManualHandoffResolveRequest,
     ManualHandoffStatus,
 )
+from app.schemas.observability import ObservabilitySummaryRead
 from app.schemas.policy import PolicyDecision
 from app.schemas.review import ReviewQueueItem, ReviewQueueStatusFilter, ReviewQueueSummary
 from app.schemas.runtime_settings import RuntimeSettingsRead
 from app.schemas.source_registry import (
+    SourcePolicyAttachRequest,
     SourcePolicyCheckRequest,
     SourcePolicyEvidenceRead,
     SourcePolicyRead,
@@ -73,9 +79,11 @@ from app.services.approvals import (
 )
 from app.services.audit import AuditEventService
 from app.services.audit_explorer import AuditExplorerService
+from app.services.auth import OperatorAuthError, create_operator_token, verify_operator_token
 from app.services.autofill import AutofillPacketService
 from app.services.candidate import CandidateSafetyError, CandidateWorkspaceService
 from app.services.dashboard import DashboardService
+from app.services.discovery_queue import DiscoveryQueueNotFoundError, DiscoveryQueueService
 from app.services.domain import DomainNormalizationError
 from app.services.drafting import DraftingProvider, DraftingSafetyError, DraftingService
 from app.services.final_review import FinalReviewPacketService
@@ -87,6 +95,7 @@ from app.services.manual_handoff import (
     ManualHandoffService,
 )
 from app.services.migrations import run_database_upgrade
+from app.services.observability import ObservabilityService
 from app.services.production_guard import WRITE_API_DISABLED_DETAIL
 from app.services.review_queue import ReviewQueueService
 from app.services.runtime_settings import RuntimeSettingsService
@@ -98,6 +107,7 @@ WRITE_GATED_ROUTES = {
     "/candidate/document-records",
     "/candidate/profile",
     "/candidate/search-criteria",
+    "/source-policies",
     "/source-policies/seed-known",
     "/sources",
 }
@@ -108,6 +118,7 @@ OPERATOR_GATED_ROUTES = WRITE_GATED_ROUTES | {
     "/final-review/packets",
     "/live-discovery/runs",
     "/live-discovery/search-runs",
+    "/discovery-queue/runs",
     "/maintenance/migrations/upgrade",
     "/manual-handoffs",
 }
@@ -122,6 +133,12 @@ def _is_operator_gated_request(request: Request) -> bool:
         return False
     if request.url.path in OPERATOR_GATED_ROUTES:
         return True
+    if request.url.path.startswith("/candidate/document-records/"):
+        return True
+    if request.url.path.startswith("/discovery-queue/runs/") and request.url.path.endswith(
+        "/process"
+    ):
+        return True
     if request.url.path.startswith("/manual-handoffs/") and request.url.path.endswith("/resolve"):
         return True
     return request.url.path.startswith("/approvals/requests/") and request.url.path.endswith(
@@ -132,7 +149,14 @@ def _is_operator_gated_request(request: Request) -> bool:
 def _operator_key_allowed(request: Request, settings: Settings) -> tuple[bool, str | None]:
     if not settings.production_operator_auth_required or not _is_operator_gated_request(request):
         return True, None
+    authorization = request.headers.get("authorization", "")
+    if authorization.casefold().startswith("bearer "):
+        token = authorization.split(" ", 1)[1].strip()
+        if verify_operator_token(settings, token) is not None:
+            return True, None
     if not settings.operator_api_key:
+        if settings.operator_session_auth_configured:
+            return False, OPERATOR_KEY_REQUIRED_DETAIL
         return False, OPERATOR_KEY_NOT_CONFIGURED_DETAIL
     supplied_key = request.headers.get(OPERATOR_KEY_HEADER, "")
     if compare_digest(supplied_key, settings.operator_api_key):
@@ -206,7 +230,7 @@ def create_app(
             CORSMiddleware,
             allow_origins=resolved_settings.cors_allowed_origins,
             allow_methods=["GET", "POST"],
-            allow_headers=["content-type", OPERATOR_KEY_HEADER],
+            allow_headers=["authorization", "content-type", OPERATOR_KEY_HEADER],
             allow_credentials=False,
         )
     if settings is not None:
@@ -235,6 +259,13 @@ def create_app(
     @app.get("/settings/runtime", response_model=RuntimeSettingsRead)
     def runtime_settings() -> RuntimeSettingsRead:
         return RuntimeSettingsService(resolved_settings).get_status()
+
+    @app.post("/auth/operator-token", response_model=OperatorTokenRead)
+    def create_operator_session(request: OperatorTokenRequest) -> OperatorTokenRead:
+        try:
+            return create_operator_token(resolved_settings, request)
+        except OperatorAuthError as exc:
+            raise HTTPException(status_code=401, detail=str(exc)) from exc
 
     @app.get("/candidate/workspace", response_model=CandidateWorkspaceRead)
     def candidate_workspace(
@@ -274,6 +305,40 @@ def create_app(
             ).create_document_record(request)
         except CandidateSafetyError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.get("/candidate/document-records", response_model=list[CandidateDocumentRecordRead])
+    def list_candidate_document_records(
+        session: Annotated[Session, Depends(get_db_session)],
+    ) -> list[CandidateDocumentRecordRead]:
+        return CandidateWorkspaceService(
+            session,
+            settings=resolved_settings,
+        ).list_document_records()
+
+    @app.get("/candidate/document-records/export", response_model=CandidateDocumentExportRead)
+    def export_candidate_document_records(
+        session: Annotated[Session, Depends(get_db_session)],
+    ) -> CandidateDocumentExportRead:
+        return CandidateWorkspaceService(
+            session,
+            settings=resolved_settings,
+        ).export_document_records()
+
+    @app.delete(
+        "/candidate/document-records/{record_id}",
+        response_model=CandidateDocumentDeleteRead,
+    )
+    def delete_candidate_document_record(
+        record_id: str,
+        session: Annotated[Session, Depends(get_db_session)],
+    ) -> CandidateDocumentDeleteRead:
+        try:
+            return CandidateWorkspaceService(
+                session,
+                settings=resolved_settings,
+            ).delete_document_record(record_id)
+        except CandidateSafetyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     @app.post("/candidate/search-criteria", response_model=SearchCriteriaRead)
     def create_candidate_search_criteria(
@@ -373,6 +438,42 @@ def create_app(
             raise HTTPException(status_code=404, detail="Live search discovery run not found.")
         return run
 
+    @app.get("/discovery-queue/runs", response_model=list[DiscoveryQueueRunRead])
+    def list_discovery_queue_runs(
+        session: Annotated[Session, Depends(get_db_session)],
+        limit: Annotated[int, Query(ge=1, le=100)] = 25,
+    ) -> list[DiscoveryQueueRunRead]:
+        return DiscoveryQueueService(
+            session,
+            settings=resolved_settings,
+            live_discovery_service=live_discovery_service,
+        ).list_runs(limit=limit)
+
+    @app.post("/discovery-queue/runs", response_model=DiscoveryQueueRunRead)
+    def enqueue_discovery_queue_run(
+        request: DiscoveryQueueRunCreate,
+        session: Annotated[Session, Depends(get_db_session)],
+    ) -> DiscoveryQueueRunRead:
+        return DiscoveryQueueService(
+            session,
+            settings=resolved_settings,
+            live_discovery_service=live_discovery_service,
+        ).enqueue(request)
+
+    @app.post("/discovery-queue/runs/{run_id}/process", response_model=DiscoveryQueueRunRead)
+    def process_discovery_queue_run(
+        run_id: str,
+        session: Annotated[Session, Depends(get_db_session)],
+    ) -> DiscoveryQueueRunRead:
+        try:
+            return DiscoveryQueueService(
+                session,
+                settings=resolved_settings,
+                live_discovery_service=live_discovery_service,
+            ).process_run(run_id)
+        except DiscoveryQueueNotFoundError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
     @app.post("/maintenance/migrations/upgrade", response_model=MigrationUpgradeRead)
     def upgrade_database_migrations() -> MigrationUpgradeRead:
         return run_database_upgrade(resolved_settings)
@@ -468,6 +569,12 @@ def create_app(
     ) -> AuditExplorerSummary:
         return AuditExplorerService(session).get_summary()
 
+    @app.get("/observability/summary", response_model=ObservabilitySummaryRead)
+    def observability_summary(
+        session: Annotated[Session, Depends(get_db_session)],
+    ) -> ObservabilitySummaryRead:
+        return ObservabilityService(session).get_summary()
+
     @app.get("/audit/verify-chain", response_model=AuditChainVerification)
     def verify_audit_chain(
         session: Annotated[Session, Depends(get_db_session)],
@@ -519,6 +626,21 @@ def create_app(
         except DomainNormalizationError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         return decision
+
+    @app.post("/source-policies", response_model=SourcePolicyRead)
+    def attach_source_policy(
+        request: SourcePolicyAttachRequest,
+        session: Annotated[Session, Depends(get_db_session)],
+    ) -> SourcePolicyRead:
+        policy = SourceRegistryService(session).attach_source_policy(
+            source_id=request.source_id,
+            status=request.status,
+            reason=request.reason,
+            allowed_actions=request.allowed_actions,
+            denied_actions=request.denied_actions,
+            evidence=request.evidence,
+        )
+        return _policy_read(policy)
 
     @app.post("/source-policies/seed-known", response_model=list[SourcePolicyRead])
     def seed_known_source_policies(

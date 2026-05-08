@@ -40,6 +40,7 @@ async function checkRuntime() {
   );
   const expectedEnabled = [
     "operator_api_key",
+    "operator_session_auth",
     "write_api",
     "live_discovery",
     "live_search_discovery",
@@ -70,7 +71,7 @@ async function checkCors() {
     headers: {
       origin: webUrl,
       "access-control-request-method": "POST",
-      "access-control-request-headers": "content-type,x-jobfinder-operator-key"
+      "access-control-request-headers": "authorization,content-type,x-jobfinder-operator-key"
     }
   });
   const allowedOrigin = response.headers.get("access-control-allow-origin");
@@ -81,6 +82,10 @@ async function checkCors() {
   assert(
     allowedHeaders.toLowerCase().includes("x-jobfinder-operator-key"),
     "CORS preflight does not allow the operator header."
+  );
+  assert(
+    allowedHeaders.toLowerCase().includes("authorization"),
+    "CORS preflight does not allow the authorization header."
   );
   checks.push({ name: "cors", status: response.status });
 }

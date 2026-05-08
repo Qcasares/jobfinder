@@ -43,9 +43,22 @@ class RuntimeSettingsService:
                     label="Operator API key",
                     enabled=self._settings.operator_auth_configured,
                     detail=(
-                        "Configured; production mutation endpoints require an operator key."
+                        "Configured as legacy bootstrap auth; bearer sessions are preferred."
                         if self._settings.operator_auth_configured
-                        else "Not configured; production mutation endpoints remain unavailable."
+                        else "Not configured."
+                    ),
+                ),
+                RuntimeCapability(
+                    key="operator_session_auth",
+                    label="Operator session auth",
+                    enabled=self._settings.operator_session_auth_configured,
+                    detail=(
+                        "Configured; production mutation endpoints accept signed bearer sessions."
+                        if self._settings.operator_session_auth_configured
+                        else (
+                            "Not configured; production mutation endpoints need legacy "
+                            "operator key."
+                        )
                     ),
                 ),
                 RuntimeCapability(

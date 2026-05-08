@@ -16,6 +16,8 @@ from app.db.models import (
 )
 from app.schemas.audit import ActorType
 from app.schemas.candidate import (
+    CandidateDocumentDeleteRead,
+    CandidateDocumentExportRead,
     CandidateDocumentRecordCreate,
     CandidateDocumentRecordRead,
     CandidateEvidenceCreate,
@@ -155,6 +157,44 @@ class CandidateWorkspaceService:
             },
         )
         return self._document_record_read(record)
+
+    def list_document_records(self) -> list[CandidateDocumentRecordRead]:
+        rows = self._session.scalars(
+            select(CandidateDocumentRecord).order_by(
+                CandidateDocumentRecord.created_at.desc(),
+                CandidateDocumentRecord.id,
+            )
+        ).all()
+        return [self._document_record_read(row) for row in rows]
+
+    def export_document_records(self) -> CandidateDocumentExportRead:
+        return CandidateDocumentExportRead(
+            records=self.list_document_records(),
+            export_note=(
+                "Metadata export only. Document bytes, credentials, and inline candidate content "
+                "are not stored or returned by Jobfinder."
+            ),
+        )
+
+    def delete_document_record(self, record_id: str) -> CandidateDocumentDeleteRead:
+        record = self._session.get(CandidateDocumentRecord, record_id)
+        if record is None:
+            raise CandidateSafetyError(f"candidate document record {record_id} was not found")
+        self._session.delete(record)
+        self._session.flush()
+        self._audit_service.create_event(
+            event_type="candidate.document_record.deleted",
+            actor_type=ActorType.USER,
+            actor_id=LOCAL_USER_ID,
+            correlation_id=record_id,
+            payload={
+                "document_record_id": record_id,
+                "content_deleted": False,
+                "metadata_deleted": True,
+                "real_candidate_data": True,
+            },
+        )
+        return CandidateDocumentDeleteRead(id=record_id, deleted=True)
 
     def create_search_criteria(self, request: SearchCriteriaCreate) -> SearchCriteriaRead:
         _validate_synthetic_text(request.name, request.query, request.location)

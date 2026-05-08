@@ -4,6 +4,7 @@ export type RuntimeCapabilityKey =
   | "audit_hash_chain"
   | "single_user_local_mode"
   | "operator_api_key"
+  | "operator_session_auth"
   | "write_api"
   | "live_crawling"
   | "live_discovery"
@@ -143,6 +144,12 @@ function localSettingsSnapshot(detail: string, checkedUrl?: string): SettingsSna
           label: "Operator API key",
           enabled: false,
           detail: "Not configured; production mutation endpoints remain unavailable."
+        },
+        {
+          key: "operator_session_auth",
+          label: "Operator session auth",
+          enabled: false,
+          detail: "Not configured; production mutation endpoints need legacy operator key."
         },
         {
           key: "write_api",
