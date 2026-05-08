@@ -8,7 +8,7 @@ Implemented. Operators submit one approved HTTPS job URL through the local opera
 
 ## Phase B: Approved Search-Result Discovery
 
-Initial implementation: operators can submit one approved HTTPS search-result page through the local operator command. The API requires the production operator key, applies the same source-policy checks, keeps discovery same-domain, enforces a result budget, and records auditable run metadata. Prohibited platforms and unknown sources stay blocked.
+Implemented. Operators can submit one approved HTTPS search-result page through the local operator command. The API requires the production operator key, applies the same source-policy checks, keeps discovery same-domain, enforces a result budget, and records auditable run metadata. Prohibited platforms and unknown sources stay blocked.
 
 Next controls before queued crawling: durable job queue, per-source rate limits, retry/backoff limits, robots/terms evidence refresh, dedupe across runs, and dashboard review for discovered URLs.
 
@@ -38,4 +38,6 @@ Next controls before actual submission: final packet approval workflow, action-t
 
 ## Phase G: Login-Gated Sources And Credentials
 
-Add login-gated access only with first-party user authorization, secure token or credential storage, revocation, least-privilege access, and log redaction. CAPTCHA, bot detection, identity checks, and access controls remain stop conditions that route to manual handoff. The system may detect and record them; it must not bypass them.
+Implemented stop-condition records. Live discovery and search-result discovery detect CAPTCHA, bot-detection, login-only, and access-control pages as terminal stop conditions. The API creates persistent manual handoff records, links them to the run, and emits audit events. It does not bypass, authenticate, store credentials, autofill, or submit.
+
+Deferred until a separate approval-gated design: first-party user authorization, secure token or credential storage, revocation, least-privilege access, and log redaction for sources that explicitly support authenticated access.

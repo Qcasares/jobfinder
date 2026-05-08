@@ -83,6 +83,7 @@ export type LiveDiscoveryRun = {
   review_item_ids: string[];
   discovered_count: number;
   discovered_urls: string[];
+  manual_handoff_id: string | null;
   failure: {
     reason: string;
     detail: string;

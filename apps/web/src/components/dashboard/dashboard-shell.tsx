@@ -1878,6 +1878,11 @@ function LiveIntakeResult({ run }: { run: LiveDiscoveryRun }) {
         </p>
       </div>
       {run.failure ? <p className="mt-2 text-red-900">{run.failure.detail}</p> : null}
+      {run.manualHandoffId ? (
+        <p className="mt-2 font-mono text-xs text-muted-foreground">
+          handoff {run.manualHandoffId}
+        </p>
+      ) : null}
       {run.discoveredUrls.length > 0 ? (
         <ul className="mt-3 grid gap-1">
           {run.discoveredUrls.slice(0, 8).map((discoveredUrl) => (

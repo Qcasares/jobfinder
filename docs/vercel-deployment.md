@@ -41,12 +41,20 @@ JOBFINDER_API_CORS_ALLOWED_ORIGINS=["https://jobfinder.quentincasares.com","http
 Do not deploy the API without a managed Postgres database. The local default database URL points at Docker Compose and is not valid in Vercel. Redis is included for future readiness but no queue worker depends on it in this tranche.
 
 Production mutation endpoints require `x-jobfinder-operator-key` to match `JOBFINDER_API_OPERATOR_API_KEY`; do not enable live capability flags unless that secret is configured. Each flag unlocks only its governed API surface and still stops before external submission. Browser execution, credential capture, LLM drafting, and submit/autofill execution remain disabled.
+Manual-handoff records are always exposed as the safe stop path for CAPTCHA, bot-detection, login-only, identity-check, and access-control pages. Creating or resolving those records is also operator-key gated in production.
 
 Run database migrations against the production database before promoting traffic:
 
 ```bash
 cd apps/api
 JOBFINDER_API_DATABASE_URL=<managed-postgres-sqlalchemy-url> uv run alembic upgrade head
+```
+
+When the production database URL is available only inside the Vercel runtime, use the operator-key-gated maintenance endpoint after deploying the API:
+
+```bash
+curl -fsS -X POST https://api.jobfinder.quentincasares.com/maintenance/migrations/upgrade \
+  -H "x-jobfinder-operator-key: $JOBFINDER_API_OPERATOR_API_KEY"
 ```
 
 Do not run migrations automatically in the Vercel build command. Builds can run for previews and retries; migrations should remain an explicit release step until a safer migration workflow exists.
@@ -91,7 +99,7 @@ curl -fsS http://127.0.0.1:8000/health
 curl -fsSI http://127.0.0.1:3000/
 ```
 
-After production promotion, run `pnpm production:smoke` again. It verifies the public web page, API health, runtime capability gates, CORS for the operator header, and unauthenticated mutation denial without reading or printing the operator secret.
+After production promotion, run `pnpm production:smoke` again. It verifies the public web page, API health, runtime capability gates, CORS for the operator header, unauthenticated live mutation denial, and unauthenticated handoff mutation denial without reading or printing the operator secret.
 
 ## Guardrails
 

@@ -55,6 +55,24 @@ SEARCH_RESULTS_HTML = b"""
 </html>
 """
 
+CAPTCHA_HTML = b"""
+<html>
+  <body>
+    <h1>Security check</h1>
+    <div class="hcaptcha">Complete this CAPTCHA to continue.</div>
+  </body>
+</html>
+"""
+
+LOGIN_HTML = b"""
+<html>
+  <body>
+    <h1>Sign in</h1>
+    <p>Login required before viewing this role.</p>
+  </body>
+</html>
+"""
+
 
 def test_live_discovery_is_denied_when_runtime_flag_is_disabled() -> None:
     session = _session()
@@ -187,6 +205,34 @@ def test_live_discovery_extracts_json_ld_and_appends_audit_events() -> None:
     assert "live_discovery.extracted" in event_types
 
 
+def test_live_discovery_routes_captcha_to_manual_handoff_record() -> None:
+    session = _session()
+    _allow_source(session, "careers.example.test")
+    audit = AuditEventService(session)
+    service = LiveDiscoveryService(
+        session,
+        settings=Settings(live_discovery_enabled=True),
+        audit_service=audit,
+        fetcher=_fetcher(CAPTCHA_HTML),
+    )
+
+    run = service.run(
+        LiveDiscoveryRequest(
+            url="https://careers.example.test/jobs/platform",
+            source_domain="careers.example.test",
+            requested_by="operator-test",
+        )
+    )
+
+    assert run.status == LiveDiscoveryStatus.DENIED
+    assert run.failure is not None
+    assert run.failure.reason == "manual_handoff_required"
+    assert run.manual_handoff_id is not None
+    event_types = [event.event_type for event in audit.list_events()]
+    assert "manual_handoff.created" in event_types
+    assert "live_discovery.denied" in event_types
+
+
 def test_live_discovery_rejects_non_https_urls() -> None:
     session = _session()
     _allow_source(session, "careers.example.test")
@@ -265,6 +311,28 @@ def test_live_search_discovery_finds_same_domain_job_links_and_audits_run() -> N
     event_types = [event.event_type for event in audit.list_events()]
     assert "live_search_discovery.requested" in event_types
     assert "live_search_discovery.discovered" in event_types
+
+
+def test_live_search_discovery_routes_login_page_to_manual_handoff_record() -> None:
+    session = _session()
+    _allow_source(session, "careers.example.test")
+    service = LiveDiscoveryService(
+        session,
+        settings=Settings(live_discovery_enabled=True, live_search_discovery_enabled=True),
+        fetcher=_fetcher(LOGIN_HTML),
+    )
+
+    run = service.discover_search_results(
+        url="https://careers.example.test/search?q=engineer",
+        source_domain="careers.example.test",
+        requested_by="operator-test",
+        max_results=5,
+    )
+
+    assert run.status == LiveDiscoveryStatus.DENIED
+    assert run.failure is not None
+    assert run.failure.reason == "manual_handoff_required"
+    assert run.manual_handoff_id is not None
 
 
 def test_live_search_discovery_requires_runtime_flag_and_discover_policy_before_fetch() -> None:

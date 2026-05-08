@@ -24,6 +24,7 @@ describe("createLiveDiscoveryRun", () => {
           review_item_ids: ["json-ld:live-platform-1"],
           discovered_count: 0,
           discovered_urls: [],
+          manual_handoff_id: null,
           failure: null
         }),
         { headers: { "content-type": "application/json" } }
@@ -69,6 +70,7 @@ describe("createLiveDiscoveryRun", () => {
             "https://careers.example.test/jobs/platform",
             "https://careers.example.test/jobs/data"
           ],
+          manual_handoff_id: null,
           failure: null
         }),
         { headers: { "content-type": "application/json" } }

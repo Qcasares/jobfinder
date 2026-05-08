@@ -43,6 +43,7 @@ async function checkRuntime() {
     "write_api",
     "live_discovery",
     "live_search_discovery",
+    "manual_handoff",
     "candidate_vault",
     "autofill_packets",
     "submission_packets"
@@ -98,6 +99,22 @@ async function checkUnauthenticatedMutationDeny() {
     "Unauthenticated mutation denial detail changed."
   );
   checks.push({ name: "unauthenticated_mutation_denied", status: response.status });
+
+  const handoffResponse = await fetch(`${apiBaseUrl}/manual-handoffs`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      url: "https://unknown.example.test/jobs/platform",
+      trigger_type: "login_required",
+      requested_by: "production-smoke",
+      detection_detail: "Manual handoff smoke probe."
+    })
+  });
+  assert(
+    handoffResponse.status === 401,
+    `Unauthenticated handoff mutation returned HTTP ${handoffResponse.status}.`
+  );
+  checks.push({ name: "unauthenticated_handoff_mutation_denied", status: handoffResponse.status });
 }
 
 async function getJson(url) {

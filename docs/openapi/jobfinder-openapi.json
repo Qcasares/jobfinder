@@ -2056,6 +2056,17 @@
             "title": "Id",
             "type": "string"
           },
+          "manual_handoff_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manual Handoff Id"
+          },
           "requested_by": {
             "title": "Requested By",
             "type": "string"
@@ -2143,6 +2154,219 @@
           "url"
         ],
         "title": "LiveSearchDiscoveryRequest",
+        "type": "object"
+      },
+      "ManualHandoffCreate": {
+        "properties": {
+          "detection_detail": {
+            "minLength": 1,
+            "title": "Detection Detail",
+            "type": "string"
+          },
+          "requested_by": {
+            "default": "local-operator",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Requested By",
+            "type": "string"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "maxLength": 36,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "source_domain": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Domain"
+          },
+          "trigger_type": {
+            "enum": [
+              "captcha",
+              "bot_detection",
+              "login_required",
+              "access_control"
+            ],
+            "title": "Trigger Type",
+            "type": "string"
+          },
+          "url": {
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "trigger_type",
+          "detection_detail"
+        ],
+        "title": "ManualHandoffCreate",
+        "type": "object"
+      },
+      "ManualHandoffRead": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "detection_detail": {
+            "title": "Detection Detail",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "requested_by": {
+            "title": "Requested By",
+            "type": "string"
+          },
+          "resolution_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Notes"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "source_domain": {
+            "title": "Source Domain",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "open",
+              "resolved"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "trigger_type": {
+            "enum": [
+              "captcha",
+              "bot_detection",
+              "login_required",
+              "access_control"
+            ],
+            "title": "Trigger Type",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "url",
+          "source_domain",
+          "trigger_type",
+          "requested_by",
+          "status",
+          "detection_detail",
+          "run_id",
+          "created_at",
+          "resolved_at",
+          "resolution_notes"
+        ],
+        "title": "ManualHandoffRead",
+        "type": "object"
+      },
+      "ManualHandoffResolveRequest": {
+        "properties": {
+          "resolution_notes": {
+            "minLength": 1,
+            "title": "Resolution Notes",
+            "type": "string"
+          },
+          "reviewer_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Reviewer Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reviewer_id",
+          "resolution_notes"
+        ],
+        "title": "ManualHandoffResolveRequest",
+        "type": "object"
+      },
+      "MigrationUpgradeRead": {
+        "properties": {
+          "revision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "revision",
+          "target"
+        ],
+        "title": "MigrationUpgradeRead",
         "type": "object"
       },
       "PolicyAction": {
@@ -2504,6 +2728,7 @@
               "live_crawling",
               "live_discovery",
               "live_search_discovery",
+              "manual_handoff",
               "llm_calls",
               "llm_drafting",
               "browser_automation",
@@ -3937,6 +4162,163 @@
           }
         },
         "summary": "Get Live Search Discovery Run"
+      }
+    },
+    "/maintenance/migrations/upgrade": {
+      "post": {
+        "operationId": "upgrade_database_migrations_maintenance_migrations_upgrade_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MigrationUpgradeRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Upgrade Database Migrations"
+      }
+    },
+    "/manual-handoffs": {
+      "get": {
+        "operationId": "list_manual_handoffs_manual_handoffs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "open",
+                    "resolved"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ManualHandoffRead"
+                  },
+                  "title": "Response List Manual Handoffs Manual Handoffs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Manual Handoffs"
+      },
+      "post": {
+        "operationId": "create_manual_handoff_manual_handoffs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualHandoffCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManualHandoffRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Manual Handoff"
+      }
+    },
+    "/manual-handoffs/{record_id}/resolve": {
+      "post": {
+        "operationId": "resolve_manual_handoff_manual_handoffs__record_id__resolve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "title": "Record Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualHandoffResolveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManualHandoffRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resolve Manual Handoff"
       }
     },
     "/review/queue": {

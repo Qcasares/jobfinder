@@ -8,6 +8,7 @@ export type RuntimeCapabilityKey =
   | "live_crawling"
   | "live_discovery"
   | "live_search_discovery"
+  | "manual_handoff"
   | "llm_calls"
   | "llm_drafting"
   | "browser_automation"
@@ -167,6 +168,13 @@ function localSettingsSnapshot(detail: string, checkedUrl?: string): SettingsSna
           label: "Live search discovery",
           enabled: false,
           detail: "Disabled by default; enable only after crawl budgets and policies."
+        },
+        {
+          key: "manual_handoff",
+          label: "Manual handoff",
+          enabled: true,
+          detail:
+            "CAPTCHA, bot detection, login-only pages, and access controls stop automation and create auditable handoff records."
         },
         {
           key: "llm_calls",

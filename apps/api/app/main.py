@@ -45,6 +45,13 @@ from app.schemas.live_discovery import (
     LiveDiscoveryRun,
     LiveSearchDiscoveryRequest,
 )
+from app.schemas.maintenance import MigrationUpgradeRead
+from app.schemas.manual_handoff import (
+    ManualHandoffCreate,
+    ManualHandoffRead,
+    ManualHandoffResolveRequest,
+    ManualHandoffStatus,
+)
 from app.schemas.policy import PolicyDecision
 from app.schemas.review import ReviewQueueItem, ReviewQueueStatusFilter, ReviewQueueSummary
 from app.schemas.runtime_settings import RuntimeSettingsRead
@@ -74,6 +81,12 @@ from app.services.drafting import DraftingProvider, DraftingSafetyError, Draftin
 from app.services.final_review import FinalReviewPacketService
 from app.services.jobs import JobCatalogService
 from app.services.live_discovery import FetchFunction, LiveDiscoveryService
+from app.services.manual_handoff import (
+    InvalidManualHandoffTransitionError,
+    ManualHandoffNotFoundError,
+    ManualHandoffService,
+)
+from app.services.migrations import run_database_upgrade
 from app.services.production_guard import WRITE_API_DISABLED_DETAIL
 from app.services.review_queue import ReviewQueueService
 from app.services.runtime_settings import RuntimeSettingsService
@@ -95,6 +108,8 @@ OPERATOR_GATED_ROUTES = WRITE_GATED_ROUTES | {
     "/final-review/packets",
     "/live-discovery/runs",
     "/live-discovery/search-runs",
+    "/maintenance/migrations/upgrade",
+    "/manual-handoffs",
 }
 
 OPERATOR_KEY_HEADER = "x-jobfinder-operator-key"
@@ -106,6 +121,8 @@ def _is_operator_gated_request(request: Request) -> bool:
     if request.method not in {"POST", "PUT", "PATCH", "DELETE"}:
         return False
     if request.url.path in OPERATOR_GATED_ROUTES:
+        return True
+    if request.url.path.startswith("/manual-handoffs/") and request.url.path.endswith("/resolve"):
         return True
     return request.url.path.startswith("/approvals/requests/") and request.url.path.endswith(
         "/decision"
@@ -355,6 +372,37 @@ def create_app(
         if run is None:
             raise HTTPException(status_code=404, detail="Live search discovery run not found.")
         return run
+
+    @app.post("/maintenance/migrations/upgrade", response_model=MigrationUpgradeRead)
+    def upgrade_database_migrations() -> MigrationUpgradeRead:
+        return run_database_upgrade(resolved_settings)
+
+    @app.get("/manual-handoffs", response_model=list[ManualHandoffRead])
+    def list_manual_handoffs(
+        session: Annotated[Session, Depends(get_db_session)],
+        status: ManualHandoffStatus | None = None,
+    ) -> list[ManualHandoffRead]:
+        return ManualHandoffService(session).list_records(status=status)
+
+    @app.post("/manual-handoffs", response_model=ManualHandoffRead)
+    def create_manual_handoff(
+        request: ManualHandoffCreate,
+        session: Annotated[Session, Depends(get_db_session)],
+    ) -> ManualHandoffRead:
+        return ManualHandoffService(session).create_record(request)
+
+    @app.post("/manual-handoffs/{record_id}/resolve", response_model=ManualHandoffRead)
+    def resolve_manual_handoff(
+        record_id: str,
+        request: ManualHandoffResolveRequest,
+        session: Annotated[Session, Depends(get_db_session)],
+    ) -> ManualHandoffRead:
+        try:
+            return ManualHandoffService(session).resolve_record(record_id, request)
+        except ManualHandoffNotFoundError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except InvalidManualHandoffTransitionError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     @app.get("/approvals/requests", response_model=list[ApprovalRequestRead])
     def list_approval_requests(

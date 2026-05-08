@@ -13,6 +13,7 @@ RuntimeCapabilityKey = Literal[
     "live_crawling",
     "live_discovery",
     "live_search_discovery",
+    "manual_handoff",
     "llm_calls",
     "llm_drafting",
     "browser_automation",

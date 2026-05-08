@@ -21,10 +21,12 @@ from app.schemas.live_discovery import (
     LiveDiscoveryStatus,
     LiveSearchDiscoveryRequest,
 )
+from app.schemas.manual_handoff import ManualHandoffCreate, ManualHandoffTrigger
 from app.schemas.policy import PolicyAction, PolicyDecision
 from app.schemas.review import ReviewQueueItem
 from app.services.audit import AuditEventService
 from app.services.domain import normalize_domain
+from app.services.manual_handoff import ManualHandoffService
 from app.services.review_queue import ReviewQueueService
 from app.services.source_registry import SourceRegistryService
 
@@ -38,6 +40,12 @@ class FetchResult:
 
 
 FetchFunction = Callable[[str], FetchResult]
+
+
+@dataclass(frozen=True)
+class StopCondition:
+    trigger_type: ManualHandoffTrigger
+    detail: str
 
 
 class LiveDiscoveryService:
@@ -161,6 +169,19 @@ class LiveDiscoveryService:
                 "bytes": len(fetched.body),
             },
         )
+        stop_condition = _detect_stop_condition(fetched.body)
+        if stop_condition is not None:
+            return self._manual_handoff(
+                active_session,
+                run_id,
+                request,
+                source_domain,
+                stop_condition,
+                final_url=fetched.final_url,
+                fetched_status_code=fetched.status_code,
+                content_type=fetched.content_type,
+            )
+
         items = self._extract_review_items(fetched, source_url=url)
         if not items:
             return self._fail(
@@ -306,6 +327,19 @@ class LiveDiscoveryService:
                 source_domain,
                 reason="fetch_http_error",
                 detail=f"Live source returned HTTP {fetched.status_code}.",
+                final_url=fetched.final_url,
+                fetched_status_code=fetched.status_code,
+                content_type=fetched.content_type,
+            )
+
+        stop_condition = _detect_stop_condition(fetched.body)
+        if stop_condition is not None:
+            return self._manual_handoff_search(
+                active_session,
+                run_id,
+                request,
+                source_domain,
+                stop_condition,
                 final_url=fetched.final_url,
                 fetched_status_code=fetched.status_code,
                 content_type=fetched.content_type,
@@ -492,6 +526,82 @@ class LiveDiscoveryService:
             content_type=content_type,
         )
 
+    def _manual_handoff(
+        self,
+        session: Session,
+        run_id: str,
+        request: LiveDiscoveryRequest,
+        source_domain: str,
+        stop_condition: StopCondition,
+        *,
+        final_url: str,
+        fetched_status_code: int,
+        content_type: str,
+    ) -> LiveDiscoveryRun:
+        record = ManualHandoffService(
+            session,
+            audit_service=self._audit_service or AuditEventService(session=session),
+        ).create_record(
+            ManualHandoffCreate(
+                url=request.url,
+                source_domain=source_domain,
+                trigger_type=stop_condition.trigger_type,
+                requested_by=request.requested_by,
+                detection_detail=stop_condition.detail,
+                run_id=run_id,
+            )
+        )
+        return self._complete_with_failure(
+            run_id,
+            request,
+            source_domain,
+            status=LiveDiscoveryStatus.DENIED,
+            reason="manual_handoff_required",
+            detail=stop_condition.detail,
+            final_url=final_url,
+            fetched_status_code=fetched_status_code,
+            content_type=content_type,
+            manual_handoff_id=record.id,
+        )
+
+    def _manual_handoff_search(
+        self,
+        session: Session,
+        run_id: str,
+        request: LiveSearchDiscoveryRequest,
+        source_domain: str,
+        stop_condition: StopCondition,
+        *,
+        final_url: str,
+        fetched_status_code: int,
+        content_type: str,
+    ) -> LiveDiscoveryRun:
+        record = ManualHandoffService(
+            session,
+            audit_service=self._audit_service or AuditEventService(session=session),
+        ).create_record(
+            ManualHandoffCreate(
+                url=request.url,
+                source_domain=source_domain,
+                trigger_type=stop_condition.trigger_type,
+                requested_by=request.requested_by,
+                detection_detail=stop_condition.detail,
+                run_id=run_id,
+            )
+        )
+        return self._complete_search_with_failure(
+            run_id,
+            request,
+            source_domain,
+            status=LiveDiscoveryStatus.DENIED,
+            reason="manual_handoff_required",
+            detail=stop_condition.detail,
+            final_url=final_url,
+            fetched_status_code=fetched_status_code,
+            content_type=content_type,
+            manual_handoff_id=record.id,
+        )
+
     def _complete_search_with_failure(
         self,
         run_id: str,
@@ -504,6 +614,7 @@ class LiveDiscoveryService:
         final_url: str | None,
         fetched_status_code: int | None,
         content_type: str | None,
+        manual_handoff_id: str | None = None,
     ) -> LiveDiscoveryRun:
         run = LiveDiscoveryRun(
             id=run_id,
@@ -514,6 +625,7 @@ class LiveDiscoveryService:
             status=status,
             fetched_status_code=fetched_status_code,
             content_type=content_type,
+            manual_handoff_id=manual_handoff_id,
             failure=LiveDiscoveryFailure(reason=reason, detail=detail),
         )
         self._search_runs[run.id] = run
@@ -525,6 +637,7 @@ class LiveDiscoveryService:
                 "detail": detail,
                 "source_domain": source_domain,
                 "url": str(request.url),
+                "manual_handoff_id": manual_handoff_id or "",
             },
         )
         return run
@@ -541,6 +654,7 @@ class LiveDiscoveryService:
         final_url: str | None,
         fetched_status_code: int | None,
         content_type: str | None,
+        manual_handoff_id: str | None = None,
     ) -> LiveDiscoveryRun:
         run = LiveDiscoveryRun(
             id=run_id,
@@ -551,6 +665,7 @@ class LiveDiscoveryService:
             status=status,
             fetched_status_code=fetched_status_code,
             content_type=content_type,
+            manual_handoff_id=manual_handoff_id,
             failure=LiveDiscoveryFailure(reason=reason, detail=detail),
         )
         self._runs[run.id] = run
@@ -562,6 +677,7 @@ class LiveDiscoveryService:
                 "detail": detail,
                 "source_domain": source_domain,
                 "url": str(request.url),
+                "manual_handoff_id": manual_handoff_id or "",
             },
         )
         return run
@@ -617,6 +733,38 @@ def _json_ld_payloads(body: bytes) -> list[bytes]:
         elif isinstance(parsed, dict):
             payloads.append(json.dumps(parsed).encode("utf-8"))
     return payloads
+
+
+STOP_CONDITION_MARKERS: tuple[tuple[ManualHandoffTrigger, str, tuple[str, ...]], ...] = (
+    (
+        "captcha",
+        "Manual handoff required: CAPTCHA challenge detected.",
+        ("captcha", "recaptcha", "hcaptcha"),
+    ),
+    (
+        "bot_detection",
+        "Manual handoff required: bot-detection or automated-traffic control detected.",
+        ("bot detection", "automated traffic", "unusual traffic", "checking your browser"),
+    ),
+    (
+        "login_required",
+        "Manual handoff required: login-only page detected.",
+        ("login required", "sign in", "log in", "create an account"),
+    ),
+    (
+        "access_control",
+        "Manual handoff required: access-control or identity check detected.",
+        ("access denied", "forbidden", "not authorized", "identity verification"),
+    ),
+)
+
+
+def _detect_stop_condition(body: bytes) -> StopCondition | None:
+    text = body.decode("utf-8", errors="ignore").casefold()
+    for trigger_type, detail, markers in STOP_CONDITION_MARKERS:
+        if any(marker in text for marker in markers):
+            return StopCondition(trigger_type=trigger_type, detail=detail)
+    return None
 
 
 class _JsonLdScriptParser(HTMLParser):

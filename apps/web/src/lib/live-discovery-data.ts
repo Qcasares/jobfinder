@@ -29,6 +29,7 @@ export type LiveDiscoveryRun = {
   reviewItemIds: string[];
   discoveredCount: number;
   discoveredUrls: string[];
+  manualHandoffId: string | null;
   failure: {
     reason: string;
     detail: string;
@@ -48,6 +49,7 @@ type ApiLiveDiscoveryRun = {
   review_item_ids: string[];
   discovered_count: number;
   discovered_urls: string[];
+  manual_handoff_id: string | null;
   failure: {
     reason: string;
     detail: string;
@@ -125,6 +127,7 @@ function mapLiveDiscoveryRun(run: ApiLiveDiscoveryRun): LiveDiscoveryRun {
     reviewItemIds: run.review_item_ids,
     discoveredCount: run.discovered_count,
     discoveredUrls: run.discovered_urls,
+    manualHandoffId: run.manual_handoff_id,
     failure: run.failure
   };
 }

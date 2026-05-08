@@ -32,6 +32,7 @@ def test_runtime_settings_expose_safe_posture_without_secret_values() -> None:
         "audit_hash_chain",
         "single_user_local_mode",
         "write_api",
+        "manual_handoff",
     }
     assert {capability.key for capability in runtime.capabilities if not capability.enabled} >= {
         "operator_api_key",

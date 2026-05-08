@@ -86,6 +86,15 @@ class RuntimeSettingsService:
                     ),
                 ),
                 RuntimeCapability(
+                    key="manual_handoff",
+                    label="Manual handoff",
+                    enabled=True,
+                    detail=(
+                        "CAPTCHA, bot detection, login-only pages, and access controls stop "
+                        "automation and create auditable handoff records."
+                    ),
+                ),
+                RuntimeCapability(
                     key="llm_calls",
                     label="LLM calls",
                     enabled=self._settings.llm_drafting_enabled,

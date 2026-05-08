@@ -308,6 +308,24 @@ class FinalReviewPacket(Base):
     )
 
 
+class ManualHandoffRecord(Base):
+    __tablename__ = "manual_handoff_records"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    source_domain: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    url: Mapped[str] = mapped_column(Text(), nullable=False)
+    trigger_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    requested_by: Mapped[str] = mapped_column(String(200), nullable=False)
+    status: Mapped[str] = mapped_column(String(40), default="open", nullable=False, index=True)
+    detection_detail: Mapped[str] = mapped_column(Text(), nullable=False)
+    run_id: Mapped[str | None] = mapped_column(String(36), index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    resolution_notes: Mapped[str | None] = mapped_column(Text())
+
+
 class ApprovalRequest(Base):
     __tablename__ = "approval_requests"
 

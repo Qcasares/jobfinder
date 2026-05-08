@@ -38,6 +38,46 @@ def test_production_live_mutations_reject_missing_operator_key() -> None:
     assert response.json() == {"detail": "A valid operator API key is required."}
 
 
+def test_production_manual_handoff_mutations_reject_missing_operator_key() -> None:
+    app = create_app(
+        Settings(
+            environment="production",
+            database_url="sqlite+pysqlite:///:memory:",
+            operator_api_key="operator-secret",
+        )
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/manual-handoffs",
+            json={
+                "url": "https://careers.example.test/jobs/platform",
+                "trigger_type": "login_required",
+                "requested_by": "operator-test",
+                "detection_detail": "Manual handoff required.",
+            },
+        )
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "A valid operator API key is required."}
+
+
+def test_production_migration_upgrade_rejects_missing_operator_key() -> None:
+    app = create_app(
+        Settings(
+            environment="production",
+            database_url="sqlite+pysqlite:///:memory:",
+            operator_api_key="operator-secret",
+        )
+    )
+
+    with TestClient(app) as client:
+        response = client.post("/maintenance/migrations/upgrade")
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "A valid operator API key is required."}
+
+
 def test_production_live_mutations_accept_operator_key() -> None:
     app = create_app(
         Settings(

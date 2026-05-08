@@ -47,6 +47,7 @@ class LiveDiscoveryRun(BaseModel):
     review_item_ids: tuple[str, ...] = ()
     discovered_count: int = Field(default=0, ge=0)
     discovered_urls: tuple[str, ...] = ()
+    manual_handoff_id: str | None = None
     failure: LiveDiscoveryFailure | None = None
 
     model_config = ConfigDict(frozen=True)
