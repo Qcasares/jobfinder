@@ -18,9 +18,9 @@ Next controls before broader crawling: background worker execution, robots/terms
 
 Initial implementation: Jobfinder can register metadata-only candidate document records behind `JOBFINDER_API_CANDIDATE_VAULT_ENABLED=true`. Records require a `vault://` storage reference, content hash, byte size, MIME type, consent scope, and retention period. The app database does not store document bytes, third-party credentials, or inline CV text. Redaction starts as pending and extraction approval is false by default.
 
-Metadata export and delete controls are implemented through the API. Deletion removes the app database record and emits audit metadata; document-byte deletion remains the responsibility of the external encrypted object store because Jobfinder does not store bytes.
+Metadata export, delete controls, and configured `vault://` storage-prefix enforcement are implemented through the API. Runtime settings expose whether the external encrypted-storage/KMS posture has been configured. Deletion removes the app database record and emits audit metadata; document-byte deletion remains the responsibility of the external encrypted object store because Jobfinder does not store bytes.
 
-Next controls before document content can drive workflow: encrypted object storage integration, redaction review, approved evidence extraction, and UI review for vault records. No model prompts or application fields should receive document content unless evidence records are approved.
+Next controls before document content can drive workflow: actual object-store API integration, redaction review, approved evidence extraction, and UI review for vault records. No model prompts or application fields should receive document content unless evidence records are approved.
 
 ## Phase D: LLM-Assisted Drafting
 
@@ -50,4 +50,4 @@ Deferred until a separate approval-gated design: first-party user authorization,
 
 ## Cross-Cutting Control Plane
 
-Implemented. `/observability/summary` exposes audit count, error count, open handoffs, queued and failed discovery, and hash-chain status. `/source-policies` can attach reviewed policies to sources from trusted operator surfaces. Signed operator sessions are preferred for browser operations; the legacy API key remains for local bootstrap and migration scripts.
+Implemented. `/observability/summary` exposes audit count, error count, open handoffs, queued and failed discovery, hash-chain status, and active alerts with recommended operator action. `/source-policies` can attach reviewed policies to sources from trusted operator surfaces. Signed operator sessions are preferred for browser operations; the legacy API key remains for local bootstrap and migration scripts.

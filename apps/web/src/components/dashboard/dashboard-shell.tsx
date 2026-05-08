@@ -1988,6 +1988,30 @@ function OperatorConsolePanel({ runtime }: { runtime: RuntimeSettings }) {
           <MetricTile label="Audit Events" value={observability?.totalAuditEvents ?? 0} />
           <MetricTile label="Errors" value={observability?.errorEvents ?? 0} />
         </div>
+        {observability?.activeAlerts.length ? (
+          <div className="grid gap-2">
+            {observability.activeAlerts.map((alert) => (
+              <div key={alert.id} className="rounded-md border border-border bg-muted/40 p-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge
+                    tone={
+                      alert.severity === "critical"
+                        ? "danger"
+                        : alert.severity === "warning"
+                          ? "warning"
+                          : "info"
+                    }
+                  >
+                    {alert.severity}
+                  </Badge>
+                  <p className="text-sm font-semibold">{alert.title}</p>
+                </div>
+                <p className="mt-2 text-sm text-muted-foreground">{alert.detail}</p>
+                <p className="mt-2 text-xs text-muted-foreground">{alert.recommendedAction}</p>
+              </div>
+            ))}
+          </div>
+        ) : null}
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"

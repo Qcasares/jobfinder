@@ -32,6 +32,8 @@ JOBFINDER_API_LIVE_SEARCH_DISCOVERY_ENABLED=true
 JOBFINDER_API_LIVE_DISCOVERY_TIMEOUT_SECONDS=8
 JOBFINDER_API_LIVE_DISCOVERY_MAX_BYTES=1000000
 JOBFINDER_API_CANDIDATE_VAULT_ENABLED=true
+JOBFINDER_API_CANDIDATE_VAULT_STORAGE_PREFIX=vault://candidate-documents/
+JOBFINDER_API_CANDIDATE_VAULT_KMS_KEY_ID=<external-kms-key-id>
 JOBFINDER_API_LLM_DRAFTING_ENABLED=false
 JOBFINDER_API_AUTOFILL_PACKETS_ENABLED=true
 JOBFINDER_API_SUBMISSION_PACKETS_ENABLED=true
@@ -41,6 +43,8 @@ JOBFINDER_API_CORS_ALLOWED_ORIGINS=["https://jobfinder.quentincasares.com","http
 ```
 
 Do not deploy the API without a managed Postgres database. The local default database URL points at Docker Compose and is not valid in Vercel. Redis is included for future readiness but no queue worker depends on it in this tranche.
+
+Candidate vault records are metadata references only. Set `JOBFINDER_API_CANDIDATE_VAULT_STORAGE_PREFIX` and `JOBFINDER_API_CANDIDATE_VAULT_KMS_KEY_ID` to reflect the external encrypted object-storage boundary before registering real document metadata. Jobfinder validates the configured `vault://` prefix but does not store document bytes.
 
 Production mutation endpoints accept signed bearer sessions created from `JOBFINDER_API_OPERATOR_LOGIN_SECRET` and signed by `JOBFINDER_API_OPERATOR_TOKEN_SECRET`. The legacy `x-jobfinder-operator-key` remains available only for bootstrap tooling and migrations. Do not enable live capability flags unless those secrets are configured. Each flag unlocks only its governed API surface and still stops before external submission. Browser execution, credential capture, LLM drafting, and submit/autofill execution remain disabled.
 Manual-handoff records are always exposed as the safe stop path for CAPTCHA, bot-detection, login-only, identity-check, and access-control pages. Creating or resolving those records is also operator-key gated in production.

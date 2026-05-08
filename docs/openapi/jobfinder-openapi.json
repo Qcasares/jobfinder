@@ -2633,8 +2633,53 @@
         "title": "MigrationUpgradeRead",
         "type": "object"
       },
+      "ObservabilityAlertRead": {
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "recommended_action": {
+            "title": "Recommended Action",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "info",
+              "warning",
+              "critical"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "severity",
+          "title",
+          "detail",
+          "recommended_action"
+        ],
+        "title": "ObservabilityAlertRead",
+        "type": "object"
+      },
       "ObservabilitySummaryRead": {
         "properties": {
+          "active_alerts": {
+            "items": {
+              "$ref": "#/components/schemas/ObservabilityAlertRead"
+            },
+            "title": "Active Alerts",
+            "type": "array"
+          },
           "audit_chain_valid": {
             "title": "Audit Chain Valid",
             "type": "boolean"
@@ -3111,6 +3156,7 @@
               "submission_packets",
               "autofill_submit",
               "candidate_vault",
+              "candidate_vault_encrypted_storage",
               "real_candidate_data"
             ],
             "title": "Key",

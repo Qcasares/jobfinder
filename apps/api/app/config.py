@@ -41,6 +41,8 @@ class Settings(BaseSettings):
     live_discovery_timeout_seconds: float = Field(default=8.0, gt=0)
     live_discovery_max_bytes: int = Field(default=1_000_000, ge=1024)
     candidate_vault_enabled: bool = Field(default=False)
+    candidate_vault_storage_prefix: str = Field(default="vault://candidate-documents/")
+    candidate_vault_kms_key_id: str = Field(default="")
     llm_drafting_enabled: bool = Field(default=False)
     autofill_packets_enabled: bool = Field(default=False)
     submission_packets_enabled: bool = Field(default=False)
@@ -84,6 +86,14 @@ class Settings(BaseSettings):
     @property
     def operator_session_auth_configured(self) -> bool:
         return bool(self.operator_login_secret and self.operator_token_secret)
+
+    @property
+    def candidate_vault_encrypted_storage_configured(self) -> bool:
+        return bool(
+            self.candidate_vault_enabled
+            and self.candidate_vault_storage_prefix.strip()
+            and self.candidate_vault_kms_key_id.strip()
+        )
 
 
 @lru_cache

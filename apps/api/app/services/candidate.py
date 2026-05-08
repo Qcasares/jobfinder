@@ -119,6 +119,7 @@ class CandidateWorkspaceService:
         if not self._settings.candidate_vault_enabled:
             raise CandidateSafetyError("candidate vault is disabled by runtime configuration")
         _validate_document_record(request)
+        _validate_document_storage_settings(request, self._settings)
         user = self._user()
         now = datetime.now(UTC)
         record = CandidateDocumentRecord(
@@ -394,3 +395,14 @@ def _validate_document_record(request: CandidateDocumentRecordCreate) -> None:
     }
     if any(marker in joined for marker in blocked_content_markers):
         raise CandidateSafetyError("document content and credentials must not be stored inline")
+
+
+def _validate_document_storage_settings(
+    request: CandidateDocumentRecordCreate,
+    settings: Settings,
+) -> None:
+    prefix = settings.candidate_vault_storage_prefix.strip()
+    if not prefix.startswith("vault://"):
+        raise CandidateSafetyError("candidate vault storage prefix must use vault://")
+    if not request.storage_ref.startswith(prefix):
+        raise CandidateSafetyError("candidate document storage_ref is outside the configured vault")

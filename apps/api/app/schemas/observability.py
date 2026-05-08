@@ -1,6 +1,20 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
+
+ObservabilityAlertSeverity = Literal["info", "warning", "critical"]
+
+
+class ObservabilityAlertRead(BaseModel):
+    id: str
+    severity: ObservabilityAlertSeverity
+    title: str
+    detail: str
+    recommended_action: str
+
+    model_config = ConfigDict(frozen=True)
 
 
 class ObservabilitySummaryRead(BaseModel):
@@ -11,5 +25,6 @@ class ObservabilitySummaryRead(BaseModel):
     failed_discovery_runs: int = Field(ge=0)
     audit_chain_valid: bool
     latest_audit_hash: str | None
+    active_alerts: list[ObservabilityAlertRead] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)

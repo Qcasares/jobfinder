@@ -132,6 +132,46 @@ def test_candidate_document_record_stores_metadata_only_and_audits(session: Sess
     assert "document_content" not in events[0].payload
 
 
+def test_candidate_document_record_enforces_configured_vault_prefix(session: Session) -> None:
+    service = CandidateWorkspaceService(
+        session,
+        settings=Settings(
+            candidate_vault_enabled=True,
+            candidate_vault_storage_prefix="vault://encrypted-candidate-documents/",
+            candidate_vault_kms_key_id="kms-key-1",
+        ),
+    )
+
+    with pytest.raises(CandidateSafetyError, match="outside the configured vault"):
+        service.create_document_record(
+            CandidateDocumentRecordCreate(
+                document_type="cv",
+                display_name="Current CV",
+                storage_ref="vault://candidate-documents/current-cv.pdf",
+                content_sha256="f" * 64,
+                byte_size=2048,
+                mime_type="application/pdf",
+                consent_scope="job_search",
+                retention_days=30,
+            )
+        )
+
+    record = service.create_document_record(
+        CandidateDocumentRecordCreate(
+            document_type="cv",
+            display_name="Current CV",
+            storage_ref="vault://encrypted-candidate-documents/current-cv.pdf",
+            content_sha256="1" * 64,
+            byte_size=2048,
+            mime_type="application/pdf",
+            consent_scope="job_search",
+            retention_days=30,
+        )
+    )
+
+    assert record.storage_ref == "vault://encrypted-candidate-documents/current-cv.pdf"
+
+
 def test_candidate_document_record_rejects_credentials_and_inline_content(session: Session) -> None:
     service = CandidateWorkspaceService(session, settings=Settings(candidate_vault_enabled=True))
 

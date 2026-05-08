@@ -47,6 +47,7 @@ def test_runtime_settings_expose_safe_posture_without_secret_values() -> None:
         "autofill_submit",
         "real_candidate_data",
         "candidate_vault",
+        "candidate_vault_encrypted_storage",
     }
 
 
@@ -101,6 +102,25 @@ def test_runtime_settings_can_expose_candidate_vault_opt_in() -> None:
     assert vault.enabled is True
     assert "metadata-only" in vault.detail
     assert real_candidate_data.enabled is False
+
+
+def test_runtime_settings_can_expose_encrypted_vault_storage_configuration() -> None:
+    settings = Settings(
+        candidate_vault_enabled=True,
+        candidate_vault_storage_prefix="vault://encrypted-candidate-documents/",
+        candidate_vault_kms_key_id="kms-key-1",
+    )
+
+    runtime = RuntimeSettingsService(settings).get_status()
+
+    encrypted_storage = next(
+        capability
+        for capability in runtime.capabilities
+        if capability.key == "candidate_vault_encrypted_storage"
+    )
+    assert encrypted_storage.enabled is True
+    assert "KMS key" in encrypted_storage.detail
+    assert "kms-key-1" not in encrypted_storage.detail
 
 
 def test_runtime_settings_can_expose_llm_drafting_opt_in() -> None:

@@ -183,6 +183,20 @@ class RuntimeSettingsService:
                     ),
                 ),
                 RuntimeCapability(
+                    key="candidate_vault_encrypted_storage",
+                    label="Encrypted vault storage",
+                    enabled=self._settings.candidate_vault_encrypted_storage_configured,
+                    detail=(
+                        "Configured with an external storage prefix and KMS key identifier; "
+                        "Jobfinder stores metadata only."
+                        if self._settings.candidate_vault_encrypted_storage_configured
+                        else (
+                            "Not configured; candidate document records remain metadata-only "
+                            "references and cannot assert external byte deletion."
+                        )
+                    ),
+                ),
+                RuntimeCapability(
                     key="real_candidate_data",
                     label="Real candidate data",
                     enabled=False,

@@ -43,6 +43,15 @@ export type ObservabilitySummary = {
   failedDiscoveryRuns: number;
   auditChainValid: boolean;
   latestAuditHash: string | null;
+  activeAlerts: ObservabilityAlert[];
+};
+
+export type ObservabilityAlert = {
+  id: string;
+  severity: "info" | "warning" | "critical";
+  title: string;
+  detail: string;
+  recommendedAction: string;
 };
 
 export type SourceRecord = {
@@ -106,6 +115,15 @@ type ApiObservabilitySummary = {
   failed_discovery_runs: number;
   audit_chain_valid: boolean;
   latest_audit_hash: string | null;
+  active_alerts: ApiObservabilityAlert[];
+};
+
+type ApiObservabilityAlert = {
+  id: string;
+  severity: "info" | "warning" | "critical";
+  title: string;
+  detail: string;
+  recommended_action: string;
 };
 
 type ApiSourceRecord = {
@@ -180,7 +198,14 @@ export async function getObservabilitySummary(): Promise<ObservabilitySummary> {
     queuedDiscoveryRuns: payload.queued_discovery_runs,
     failedDiscoveryRuns: payload.failed_discovery_runs,
     auditChainValid: payload.audit_chain_valid,
-    latestAuditHash: payload.latest_audit_hash
+    latestAuditHash: payload.latest_audit_hash,
+    activeAlerts: payload.active_alerts.map((alert) => ({
+      id: alert.id,
+      severity: alert.severity,
+      title: alert.title,
+      detail: alert.detail,
+      recommendedAction: alert.recommended_action
+    }))
   };
 }
 

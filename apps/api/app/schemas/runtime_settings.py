@@ -22,6 +22,7 @@ RuntimeCapabilityKey = Literal[
     "submission_packets",
     "autofill_submit",
     "candidate_vault",
+    "candidate_vault_encrypted_storage",
     "real_candidate_data",
 ]
 

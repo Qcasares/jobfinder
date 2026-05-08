@@ -17,6 +17,7 @@ export type RuntimeCapabilityKey =
   | "submission_packets"
   | "autofill_submit"
   | "candidate_vault"
+  | "candidate_vault_encrypted_storage"
   | "real_candidate_data";
 
 export type RuntimeCapability = {
@@ -226,6 +227,13 @@ function localSettingsSnapshot(detail: string, checkedUrl?: string): SettingsSna
           label: "Candidate vault",
           enabled: false,
           detail: "Disabled by default; real candidate document records require explicit vault enablement."
+        },
+        {
+          key: "candidate_vault_encrypted_storage",
+          label: "Encrypted vault storage",
+          enabled: false,
+          detail:
+            "Not configured; candidate document records remain metadata-only references and cannot assert external byte deletion."
         },
         {
           key: "real_candidate_data",

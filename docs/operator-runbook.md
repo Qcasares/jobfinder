@@ -38,7 +38,11 @@ Queued discovery records are available through the Operator Console and `/discov
 
 ## Candidate Document Controls
 
-Candidate document records are metadata only. Use `/candidate/document-records/export` to export metadata for review and `DELETE /candidate/document-records/{record_id}` to remove a record. Jobfinder does not store document bytes, third-party credentials, or inline CV text in this tranche.
+Candidate document records are metadata only. Use `/candidate/document-records/export` to export metadata for review and `DELETE /candidate/document-records/{record_id}` to remove a record. Jobfinder validates the configured `vault://` storage prefix, reports encrypted-storage posture in runtime settings, and does not store document bytes, third-party credentials, or inline CV text in this tranche.
+
+## Observability Alerts
+
+The Operator Console and `/observability/summary` report active alerts for audit-chain failures, failed discovery runs, failure audit events, and open manual handoffs. Treat critical audit alerts as a production pause condition until the audit chain is investigated.
 
 ## Production Migrations
 
