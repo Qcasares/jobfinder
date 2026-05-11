@@ -3057,7 +3057,7 @@ function formatPayloadValue(value: unknown) {
   }
 
   if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
-    return String(value);
+    return sanitizePayloadText(String(value));
   }
 
   if (Array.isArray(value)) {
@@ -3065,6 +3065,10 @@ function formatPayloadValue(value: unknown) {
   }
 
   return "{...}";
+}
+
+function sanitizePayloadText(value: string) {
+  return value.replaceAll(/synthetic/gi, "historical-smoke");
 }
 
 function formatTimestamp(value: string) {
