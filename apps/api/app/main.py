@@ -39,7 +39,11 @@ from app.schemas.candidate import (
     SearchCriteriaRead,
 )
 from app.schemas.dashboard import DashboardSummary
-from app.schemas.discovery_queue import DiscoveryQueueRunCreate, DiscoveryQueueRunRead
+from app.schemas.discovery_queue import (
+    DiscoveryQueueBatchRead,
+    DiscoveryQueueRunCreate,
+    DiscoveryQueueRunRead,
+)
 from app.schemas.drafting import DraftingRequest, DraftingRunRead
 from app.schemas.final_review import FinalReviewPacketRead, FinalReviewPacketRequest
 from app.schemas.health import HealthResponse
@@ -127,6 +131,8 @@ OPERATOR_GATED_ROUTES = WRITE_GATED_ROUTES | {
 OPERATOR_KEY_HEADER = "x-jobfinder-operator-key"
 OPERATOR_KEY_NOT_CONFIGURED_DETAIL = "Operator API key is not configured."
 OPERATOR_KEY_REQUIRED_DETAIL = "A valid operator API key is required."
+CRON_SECRET_NOT_CONFIGURED_DETAIL = "Cron secret is not configured."
+CRON_SECRET_REQUIRED_DETAIL = "A valid cron bearer token is required."
 
 
 def _is_operator_gated_request(request: Request) -> bool:
@@ -163,6 +169,18 @@ def _operator_key_allowed(request: Request, settings: Settings) -> tuple[bool, s
     if compare_digest(supplied_key, settings.operator_api_key):
         return True, None
     return False, OPERATOR_KEY_REQUIRED_DETAIL
+
+
+def _cron_request_allowed(request: Request, settings: Settings) -> tuple[bool, str | None]:
+    if not settings.cron_secret:
+        return False, CRON_SECRET_NOT_CONFIGURED_DETAIL
+    authorization = request.headers.get("authorization", "")
+    if not authorization.casefold().startswith("bearer "):
+        return False, CRON_SECRET_REQUIRED_DETAIL
+    supplied_secret = authorization.split(" ", 1)[1].strip()
+    if compare_digest(supplied_secret, settings.cron_secret):
+        return True, None
+    return False, CRON_SECRET_REQUIRED_DETAIL
 
 
 def create_app(
@@ -504,6 +522,26 @@ def create_app(
             ).process_run(run_id)
         except DiscoveryQueueNotFoundError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @app.get("/maintenance/discovery-queue/process", response_model=DiscoveryQueueBatchRead)
+    def process_ready_discovery_queue_runs(
+        request: Request,
+        session: Annotated[Session, Depends(get_db_session)],
+        limit: Annotated[int, Query(ge=1, le=20)] = 5,
+    ) -> DiscoveryQueueBatchRead:
+        allowed, detail = _cron_request_allowed(request, resolved_settings)
+        if not allowed:
+            status_code = (
+                status.HTTP_503_SERVICE_UNAVAILABLE
+                if detail == CRON_SECRET_NOT_CONFIGURED_DETAIL
+                else status.HTTP_401_UNAUTHORIZED
+            )
+            raise HTTPException(status_code=status_code, detail=detail)
+        return DiscoveryQueueService(
+            session,
+            settings=resolved_settings,
+            live_discovery_service=live_discovery_service,
+        ).process_ready_runs(limit=limit)
 
     @app.post("/maintenance/migrations/upgrade", response_model=MigrationUpgradeRead)
     def upgrade_database_migrations() -> MigrationUpgradeRead:

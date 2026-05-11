@@ -13,6 +13,7 @@ await checkHealth();
 await checkRuntime();
 await checkCors();
 await checkUnauthenticatedMutationDeny();
+await checkCronDeny();
 
 console.log(JSON.stringify({ ok: true, checks }, null, 2));
 
@@ -120,6 +121,18 @@ async function checkUnauthenticatedMutationDeny() {
     `Unauthenticated handoff mutation returned HTTP ${handoffResponse.status}.`
   );
   checks.push({ name: "unauthenticated_handoff_mutation_denied", status: handoffResponse.status });
+}
+
+async function checkCronDeny() {
+  const response = await fetch(`${apiBaseUrl}/maintenance/discovery-queue/process`);
+  const payload = await response.json();
+
+  assert(response.status === 401, `Unauthenticated cron returned HTTP ${response.status}.`);
+  assert(
+    payload.detail === "A valid cron bearer token is required.",
+    "Unauthenticated cron denial detail changed."
+  );
+  checks.push({ name: "unauthenticated_cron_denied", status: response.status });
 }
 
 async function getJson(url) {

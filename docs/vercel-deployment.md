@@ -27,6 +27,7 @@ JOBFINDER_API_WRITE_API_ENABLED=true
 JOBFINDER_API_OPERATOR_API_KEY=<strong-random-operator-secret>
 JOBFINDER_API_OPERATOR_LOGIN_SECRET=<strong-random-operator-login-secret>
 JOBFINDER_API_OPERATOR_TOKEN_SECRET=<strong-random-token-signing-secret>
+CRON_SECRET=<strong-random-cron-secret>
 JOBFINDER_API_LIVE_DISCOVERY_ENABLED=true
 JOBFINDER_API_LIVE_SEARCH_DISCOVERY_ENABLED=true
 JOBFINDER_API_LIVE_DISCOVERY_TIMEOUT_SECONDS=8
@@ -48,6 +49,7 @@ Candidate vault records are metadata references only. Set `JOBFINDER_API_CANDIDA
 
 Production mutation endpoints accept signed bearer sessions created from `JOBFINDER_API_OPERATOR_LOGIN_SECRET` and signed by `JOBFINDER_API_OPERATOR_TOKEN_SECRET`. The legacy `x-jobfinder-operator-key` remains available only for bootstrap tooling and migrations. Do not enable live capability flags unless those secrets are configured. Each flag unlocks only its governed API surface and still stops before external submission. Browser execution, credential capture, LLM drafting, and submit/autofill execution remain disabled.
 Manual-handoff records are always exposed as the safe stop path for CAPTCHA, bot-detection, login-only, identity-check, and access-control pages. Creating or resolving those records is also operator-key gated in production.
+Queued discovery is processed by the API project's Vercel Cron job at `/maintenance/discovery-queue/process`. The endpoint requires `Authorization: Bearer $CRON_SECRET` and processes a bounded batch while honoring source rate limits. The production schedule is daily at 08:00 UTC to fit Vercel Hobby cron limits; use the Operator Console for manual processing between scheduled runs.
 
 Run database migrations against the production database before promoting traffic:
 

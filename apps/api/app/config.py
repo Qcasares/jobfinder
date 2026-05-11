@@ -33,6 +33,10 @@ class Settings(BaseSettings):
             "OPERATOR_TOKEN_SECRET",
         ),
     )
+    cron_secret: str = Field(
+        default="",
+        validation_alias=AliasChoices("JOBFINDER_API_CRON_SECRET", "CRON_SECRET"),
+    )
     operator_token_ttl_seconds: int = Field(default=28_800, ge=300, le=86_400)
     audit_schema_version: int = Field(default=1, ge=1)
     write_api_enabled: bool = Field(default=False)

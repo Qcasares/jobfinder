@@ -157,6 +157,41 @@ def test_discovery_queue_search_enqueues_discovered_job_runs() -> None:
     assert all(run.status in {"queued", "rate_limited"} for run in child_runs)
 
 
+def test_discovery_queue_processes_ready_batch_and_skips_future_rate_limits() -> None:
+    session = _session()
+    _allow_source(session, "careers.example.test")
+    _allow_source(session, "other.example.test")
+    live = LiveDiscoveryService(
+        session,
+        settings=Settings(live_discovery_enabled=True),
+        fetcher=lambda url: FetchResult(
+            final_url=url,
+            status_code=200,
+            content_type="text/html",
+            body=JSON_LD_HTML,
+        ),
+    )
+    service = DiscoveryQueueService(
+        session,
+        settings=Settings(live_discovery_enabled=True),
+        live_discovery_service=live,
+    )
+    first = service.enqueue(DiscoveryQueueRunCreate(url="https://careers.example.test/jobs/one"))
+    second = service.enqueue(DiscoveryQueueRunCreate(url="https://careers.example.test/jobs/two"))
+    third = service.enqueue(DiscoveryQueueRunCreate(url="https://other.example.test/jobs/three"))
+
+    batch = service.process_ready_runs(limit=5)
+
+    refreshed = {run.id: run for run in service.list_runs(limit=10)}
+    assert batch.requested_limit == 5
+    assert batch.processed_count == 2
+    assert batch.processed_run_ids == [first.id, third.id]
+    assert batch.rate_limited_count == 1
+    assert refreshed[first.id].status == "completed"
+    assert refreshed[second.id].status == "rate_limited"
+    assert refreshed[third.id].status == "completed"
+
+
 def _session() -> Session:
     engine = create_engine("sqlite+pysqlite:///:memory:")
     Base.metadata.create_all(engine)

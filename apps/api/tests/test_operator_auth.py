@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.pool import StaticPool
 
 from app.config import Settings
+from app.db.base import Base
 from app.main import create_app
 
 
@@ -76,6 +79,64 @@ def test_production_migration_upgrade_rejects_missing_operator_key() -> None:
 
     assert response.status_code == 401
     assert response.json() == {"detail": "A valid operator API key is required."}
+
+
+def test_cron_discovery_queue_processing_rejects_missing_cron_secret() -> None:
+    app = create_app(Settings(database_url="sqlite+pysqlite:///:memory:"))
+
+    with TestClient(app) as client:
+        response = client.get("/maintenance/discovery-queue/process")
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Cron secret is not configured."}
+
+
+def test_cron_discovery_queue_processing_requires_bearer_secret() -> None:
+    app = create_app(
+        Settings(
+            database_url="sqlite+pysqlite:///:memory:",
+            cron_secret="cron-secret",
+        )
+    )
+
+    with TestClient(app) as client:
+        response = client.get("/maintenance/discovery-queue/process")
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "A valid cron bearer token is required."}
+
+
+def test_cron_discovery_queue_processing_accepts_cron_secret() -> None:
+    engine = create_engine(
+        "sqlite+pysqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    app = create_app(
+        Settings(
+            database_url="sqlite+pysqlite:///:memory:",
+            cron_secret="cron-secret",
+        ),
+        test_engine=engine,
+    )
+
+    with TestClient(app) as client:
+        response = client.get(
+            "/maintenance/discovery-queue/process",
+            headers={"authorization": "Bearer cron-secret"},
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "requested_limit": 5,
+        "processed_count": 0,
+        "processed_run_ids": [],
+        "completed_count": 0,
+        "failed_count": 0,
+        "manual_handoff_count": 0,
+        "rate_limited_count": 0,
+    }
 
 
 def test_production_live_mutations_accept_operator_key() -> None:

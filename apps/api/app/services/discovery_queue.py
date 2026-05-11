@@ -4,13 +4,17 @@ from datetime import UTC, datetime, timedelta
 from urllib.parse import urlparse
 from uuid import uuid4
 
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.config import Settings
 from app.db.models import DiscoveryQueueRun
 from app.schemas.audit import ActorType, JsonValue
-from app.schemas.discovery_queue import DiscoveryQueueRunCreate, DiscoveryQueueRunRead
+from app.schemas.discovery_queue import (
+    DiscoveryQueueBatchRead,
+    DiscoveryQueueRunCreate,
+    DiscoveryQueueRunRead,
+)
 from app.schemas.live_discovery import LiveDiscoveryRequest, LiveSearchDiscoveryRequest
 from app.services.audit import AuditEventService
 from app.services.domain import normalize_domain
@@ -98,6 +102,58 @@ class DiscoveryQueueService:
             .limit(limit)
         ).all()
         return [_read(row) for row in rows]
+
+    def process_ready_runs(self, *, limit: int = 5) -> DiscoveryQueueBatchRead:
+        now = datetime.now(UTC)
+        rows = self._session.scalars(
+            select(DiscoveryQueueRun)
+            .where(
+                or_(
+                    DiscoveryQueueRun.status == "queued",
+                    (
+                        (DiscoveryQueueRun.status == "rate_limited")
+                        & (DiscoveryQueueRun.rate_limit_after <= now)
+                    ),
+                    (
+                        (DiscoveryQueueRun.status == "rate_limited")
+                        & (DiscoveryQueueRun.rate_limit_after.is_(None))
+                    ),
+                )
+            )
+            .order_by(DiscoveryQueueRun.created_at.asc(), DiscoveryQueueRun.id)
+            .limit(limit)
+        ).all()
+        processed = [self.process_run(row.id) for row in rows]
+        rate_limited_count = self._session.scalar(
+            select(func.count())
+            .select_from(DiscoveryQueueRun)
+            .where(
+                DiscoveryQueueRun.status == "rate_limited",
+                DiscoveryQueueRun.rate_limit_after > datetime.now(UTC),
+            )
+        )
+        processed_run_ids = [run.id for run in processed]
+        processed_run_id_payload: list[JsonValue] = [run_id for run_id in processed_run_ids]
+        self._audit(
+            "discovery_queue.batch_processed",
+            f"batch:{now.isoformat()}",
+            {
+                "requested_limit": limit,
+                "processed_count": len(processed),
+                "processed_run_ids": processed_run_id_payload,
+            },
+        )
+        return DiscoveryQueueBatchRead(
+            requested_limit=limit,
+            processed_count=len(processed),
+            processed_run_ids=processed_run_ids,
+            completed_count=sum(1 for run in processed if run.status == "completed"),
+            failed_count=sum(1 for run in processed if run.status == "failed"),
+            manual_handoff_count=sum(
+                1 for run in processed if run.status == "manual_handoff_required"
+            ),
+            rate_limited_count=rate_limited_count or 0,
+        )
 
     def process_run(self, run_id: str) -> DiscoveryQueueRunRead:
         row = self._session.get(DiscoveryQueueRun, run_id)

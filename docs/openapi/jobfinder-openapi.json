@@ -1305,6 +1305,52 @@
         "title": "DashboardSummary",
         "type": "object"
       },
+      "DiscoveryQueueBatchRead": {
+        "properties": {
+          "completed_count": {
+            "title": "Completed Count",
+            "type": "integer"
+          },
+          "failed_count": {
+            "title": "Failed Count",
+            "type": "integer"
+          },
+          "manual_handoff_count": {
+            "title": "Manual Handoff Count",
+            "type": "integer"
+          },
+          "processed_count": {
+            "title": "Processed Count",
+            "type": "integer"
+          },
+          "processed_run_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Processed Run Ids",
+            "type": "array"
+          },
+          "rate_limited_count": {
+            "title": "Rate Limited Count",
+            "type": "integer"
+          },
+          "requested_limit": {
+            "title": "Requested Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "requested_limit",
+          "processed_count",
+          "processed_run_ids",
+          "completed_count",
+          "failed_count",
+          "manual_handoff_count",
+          "rate_limited_count"
+        ],
+        "title": "DiscoveryQueueBatchRead",
+        "type": "object"
+      },
       "DiscoveryQueueRunCreate": {
         "properties": {
           "max_attempts": {
@@ -4918,6 +4964,48 @@
           }
         },
         "summary": "Get Live Search Discovery Run"
+      }
+    },
+    "/maintenance/discovery-queue/process": {
+      "get": {
+        "operationId": "process_ready_discovery_queue_runs_maintenance_discovery_queue_process_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 5,
+              "maximum": 20,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscoveryQueueBatchRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Process Ready Discovery Queue Runs"
       }
     },
     "/maintenance/migrations/upgrade": {

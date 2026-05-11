@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/maintenance/discovery-queue/process",
+      "schedule": "0 8 * * *"
+    }
+  ]
+}

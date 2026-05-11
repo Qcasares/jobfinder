@@ -46,3 +46,15 @@ class DiscoveryQueueRunRead(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(frozen=True)
+
+
+class DiscoveryQueueBatchRead(BaseModel):
+    requested_limit: int
+    processed_count: int
+    processed_run_ids: list[str]
+    completed_count: int
+    failed_count: int
+    manual_handoff_count: int
+    rate_limited_count: int
+
+    model_config = ConfigDict(frozen=True)

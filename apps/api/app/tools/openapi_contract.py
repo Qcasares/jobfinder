@@ -40,6 +40,7 @@ EXPECTED_PHASE_1_PATHS = {
     "/live-discovery/runs/{run_id}",
     "/live-discovery/search-runs",
     "/live-discovery/search-runs/{run_id}",
+    "/maintenance/discovery-queue/process",
     "/maintenance/migrations/upgrade",
     "/manual-handoffs",
     "/manual-handoffs/{record_id}/resolve",
