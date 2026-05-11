@@ -1,4 +1,4 @@
-import { dashboardData, type ReviewQueueItem as ReviewQueueBucket } from "./dashboard-data";
+import type { ReviewQueueItem as ReviewQueueBucket } from "./dashboard-data";
 
 export type ReviewStatus = "ready" | "needs_review";
 export type ReviewDataSource = "api" | "local";
@@ -50,12 +50,6 @@ export type ReviewQueueSnapshot = {
   buckets: ReviewQueueBucket[];
 };
 
-type ApiReviewSummary = {
-  total: number;
-  ready: number;
-  needs_review: number;
-};
-
 type ApiReviewItem = {
   id: string;
   source: string;
@@ -94,7 +88,7 @@ export async function getReviewQueueSnapshot(): Promise<ReviewQueueSnapshot> {
 
   if (!apiBaseUrl) {
     return localReviewQueueSnapshot(
-      "NEXT_PUBLIC_API_BASE_URL is not configured; synthetic dashboard data is shown."
+      "NEXT_PUBLIC_API_BASE_URL is not configured; no live review queue records are shown."
     );
   }
 
@@ -109,28 +103,31 @@ export async function getReviewQueueSnapshot(): Promise<ReviewQueueSnapshot> {
 
     if (!summaryResponse.ok || !queueResponse.ok) {
       return localReviewQueueSnapshot(
-        `Review API returned HTTP ${summaryResponse.status}/${queueResponse.status}; synthetic dashboard data is shown.`,
+        `Review API returned HTTP ${summaryResponse.status}/${queueResponse.status}; no live review queue records are shown.`,
         queueUrl
       );
     }
 
-    const summary = (await summaryResponse.json()) as ApiReviewSummary;
     const items = ((await queueResponse.json()) as ApiReviewItem[]).map(mapApiReviewItem);
+    const liveItems = items.filter((item) => !item.synthetic);
 
     return {
       source: "api",
-      detail: "Review queue data is loaded from the FastAPI synthetic fixture endpoints.",
+      detail: "Review queue data is loaded from approved intake and extraction records.",
       checkedUrl: queueUrl,
       summary: {
-        total: summary.total,
-        ready: summary.ready,
-        needsReview: summary.needs_review
+        total: liveItems.length,
+        ready: liveItems.filter((item) => item.reviewStatus === "ready").length,
+        needsReview: liveItems.filter((item) => item.reviewStatus === "needs_review").length
       },
       items,
-      buckets: buildBuckets(items)
+      buckets: buildBuckets(liveItems)
     };
   } catch {
-    return localReviewQueueSnapshot("Review API is unreachable; synthetic dashboard data is shown.", queueUrl);
+    return localReviewQueueSnapshot(
+      "Review API is unreachable; no live review queue records are shown.",
+      queueUrl
+    );
   }
 }
 
@@ -172,82 +169,17 @@ function mapApiReviewItem(item: ApiReviewItem): ReviewJobItem {
 }
 
 function localReviewQueueSnapshot(detail: string, checkedUrl?: string): ReviewQueueSnapshot {
-  const items: ReviewJobItem[] = [
-    {
-      id: "local:review-policy-ambiguity",
-      source: "local-fixture",
-      externalId: "review-policy-ambiguity",
-      title: "Policy ambiguity sample",
-      company: "Synthetic Careers Ltd",
-      locations: ["Remote - UK"],
-      remoteType: "remote",
-      salaryMin: null,
-      salaryMax: null,
-      salaryCurrency: null,
-      employmentType: "full_time",
-      postedDate: null,
-      validThrough: null,
-      requiredSkills: ["Python", "SQL"],
-      preferredSkills: ["FastAPI"],
-      reviewStatus: "needs_review",
-      reviewReasons: ["Source policy and provenance require manual review."],
-      extractionConfidence: 0.72,
-      provenanceHints: {
-        title: {
-          fieldName: "title",
-          source: "local_dashboard_fixture",
-          confidence: 0.72,
-          note: "Synthetic fallback item; not a scraped posting."
-        }
-      },
-      synthetic: true,
-      dataOrigin: "local_dashboard_fixture",
-      fixtureName: null
-    },
-    {
-      id: "local:ready-greenhouse-fixture",
-      source: "greenhouse",
-      externalId: "ready-greenhouse-fixture",
-      title: "Backend Engineer fixture",
-      company: "Acme Robotics",
-      locations: ["London, UK"],
-      remoteType: "onsite",
-      salaryMin: 100000,
-      salaryMax: 120000,
-      salaryCurrency: "USD",
-      employmentType: "full_time",
-      postedDate: "2026-03-01",
-      validThrough: null,
-      requiredSkills: ["Python", "SQL"],
-      preferredSkills: [],
-      reviewStatus: "ready",
-      reviewReasons: [],
-      extractionConfidence: 0.96,
-      provenanceHints: {
-        title: {
-          fieldName: "title",
-          source: "structured_adapter",
-          confidence: 0.96,
-          note: "Synthetic fallback item; not a scraped posting."
-        }
-      },
-      synthetic: true,
-      dataOrigin: "local_dashboard_fixture",
-      fixtureName: null
-    }
-  ];
-
   return {
     source: "local",
     detail,
     checkedUrl,
     summary: {
-      total: items.length,
-      ready: items.filter((item) => item.reviewStatus === "ready").length,
-      needsReview: items.filter((item) => item.reviewStatus === "needs_review").length
+      total: 0,
+      ready: 0,
+      needsReview: 0
     },
-    items,
-    buckets: dashboardData.reviewQueue
+    items: [],
+    buckets: buildBuckets([])
   };
 }
 

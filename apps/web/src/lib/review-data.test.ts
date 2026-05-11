@@ -6,14 +6,14 @@ describe("getReviewQueueSnapshot", () => {
     vi.unstubAllEnvs();
   });
 
-  it("uses synthetic local review data when the API URL is not configured", async () => {
+  it("uses an empty local live-review state when the API URL is not configured", async () => {
     vi.stubEnv("NEXT_PUBLIC_API_BASE_URL", "");
 
     const snapshot = await getReviewQueueSnapshot();
 
     expect(snapshot.source).toBe("local");
-    expect(snapshot.summary).toEqual({ total: 2, ready: 1, needsReview: 1 });
-    expect(snapshot.items.every((item) => item.synthetic)).toBe(true);
-    expect(snapshot.items.some((item) => item.reviewStatus === "needs_review")).toBe(true);
+    expect(snapshot.summary).toEqual({ total: 0, ready: 0, needsReview: 0 });
+    expect(snapshot.items).toHaveLength(0);
+    expect(snapshot.detail).toContain("no live review queue records");
   });
 });

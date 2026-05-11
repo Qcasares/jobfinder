@@ -80,7 +80,7 @@ def test_policy_check_endpoint_allows_explicit_persisted_policy(
     assert response.json()["status"] == PolicyStatus.ALLOWED
 
 
-def test_seed_known_endpoint_creates_prohibited_sources(
+def test_seed_known_endpoint_creates_live_and_prohibited_sources(
     client_and_database_url: tuple[TestClient, str],
 ) -> None:
     client, _ = client_and_database_url
@@ -90,12 +90,19 @@ def test_seed_known_endpoint_creates_prohibited_sources(
         "/source-policies/check",
         json={"domain": "linkedin.com", "action": "extract"},
     )
+    live_check_response = client.post(
+        "/source-policies/check",
+        json={"domain": "reed.co.uk", "action": "discover"},
+    )
 
     assert seed_response.status_code == 200
-    assert len(seed_response.json()) == 2
+    assert len(seed_response.json()) == 7
     assert check_response.status_code == 200
     assert check_response.json()["allowed"] is False
     assert check_response.json()["status"] == PolicyStatus.DENIED
+    assert live_check_response.status_code == 200
+    assert live_check_response.json()["allowed"] is True
+    assert live_check_response.json()["status"] == PolicyStatus.ALLOWED
 
 
 def test_local_dashboard_origin_can_preflight_policy_check(

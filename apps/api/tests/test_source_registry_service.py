@@ -99,7 +99,7 @@ def test_source_registry_requires_review_when_policy_evidence_is_expired() -> No
     assert "expired" in decision.reason
 
 
-def test_seed_known_source_policies_denies_linkedin_and_indeed_actions() -> None:
+def test_seed_known_source_policies_allows_live_boards_and_denies_prohibited_actions() -> None:
     engine = create_engine("sqlite+pysqlite:///:memory:")
     Base.metadata.create_all(engine)
 
@@ -110,15 +110,27 @@ def test_seed_known_source_policies_denies_linkedin_and_indeed_actions() -> None
             domain="www.linkedin.com",
             action=PolicyAction.DISCOVER,
         )
+        reed_decision = service.evaluate_action(
+            domain="www.reed.co.uk",
+            action=PolicyAction.DISCOVER,
+        )
+        reed_submit_decision = service.evaluate_action(
+            domain="reed.co.uk",
+            action=PolicyAction.SUBMIT,
+        )
         indeed_decision = service.evaluate_action(
             domain="indeed.com",
             action=PolicyAction.SUBMIT,
         )
         evidence = session.scalars(select(SourcePolicyEvidence)).all()
 
-    assert len(policies) == 2
+    assert len(policies) == 7
+    assert reed_decision.allowed is True
+    assert reed_decision.status is PolicyStatus.ALLOWED
+    assert reed_submit_decision.allowed is False
+    assert reed_submit_decision.status is PolicyStatus.DENIED
     assert linkedin_decision.allowed is False
     assert linkedin_decision.status is PolicyStatus.DENIED
     assert indeed_decision.allowed is False
     assert indeed_decision.status is PolicyStatus.DENIED
-    assert {item.evidence_type for item in evidence} == {"synthetic_policy_review"}
+    assert {item.evidence_type for item in evidence} == {"operator_source_review"}

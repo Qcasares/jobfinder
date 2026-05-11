@@ -63,7 +63,7 @@ export async function getAuditSnapshot(): Promise<AuditSnapshot> {
 
   if (!apiBaseUrl) {
     return localAuditSnapshot(
-      "NEXT_PUBLIC_API_BASE_URL is not configured; synthetic audit data is shown."
+      "NEXT_PUBLIC_API_BASE_URL is not configured; local audit fallback data is shown."
     );
   }
 
@@ -78,7 +78,7 @@ export async function getAuditSnapshot(): Promise<AuditSnapshot> {
 
     if (!summaryResponse.ok || !eventsResponse.ok) {
       return localAuditSnapshot(
-        `Audit API returned HTTP ${summaryResponse.status}/${eventsResponse.status}; synthetic audit data is shown.`,
+        `Audit API returned HTTP ${summaryResponse.status}/${eventsResponse.status}; local audit fallback data is shown.`,
         eventsUrl
       );
     }
@@ -99,7 +99,7 @@ export async function getAuditSnapshot(): Promise<AuditSnapshot> {
       events
     };
   } catch {
-    return localAuditSnapshot("Audit API is unreachable; synthetic audit data is shown.", eventsUrl);
+    return localAuditSnapshot("Audit API is unreachable; local audit fallback data is shown.", eventsUrl);
   }
 }
 
@@ -120,10 +120,10 @@ function mapApiAuditEvent(event: ApiAuditEvent): AuditEventItem {
 
 function localAuditSnapshot(detail: string, checkedUrl?: string): AuditSnapshot {
   const events = dashboardData.auditFeed.map((event, index): AuditEventItem => {
-    const eventHash = `synthetic-${event.id}`;
+    const eventHash = `local-${event.id}`;
     const previousHash =
       index < dashboardData.auditFeed.length - 1
-        ? `synthetic-${dashboardData.auditFeed[index + 1].id}`
+        ? `local-${dashboardData.auditFeed[index + 1].id}`
         : null;
 
     return {
@@ -138,7 +138,7 @@ function localAuditSnapshot(detail: string, checkedUrl?: string): AuditSnapshot 
       payload: {
         subject: event.subject,
         provenance: event.provenance,
-        synthetic: true
+        origin: "local_fallback"
       },
       createdAt: `2026-04-30T${event.occurredAt}:00Z`
     };

@@ -6,14 +6,14 @@ describe("getJobCatalogSnapshot", () => {
     vi.unstubAllEnvs();
   });
 
-  it("uses synthetic local job data when the API URL is not configured", async () => {
+  it("uses an empty local live-job state when the API URL is not configured", async () => {
     vi.stubEnv("NEXT_PUBLIC_API_BASE_URL", "");
 
     const snapshot = await getJobCatalogSnapshot();
 
     expect(snapshot.source).toBe("local");
-    expect(snapshot.summary).toMatchObject({ total: 1, ready: 1, needsReview: 0 });
-    expect(snapshot.jobs.every((job) => job.synthetic)).toBe(true);
-    expect(snapshot.jobs[0].fixtureName).toBe("greenhouse_missing_salary.json");
+    expect(snapshot.summary).toMatchObject({ total: 0, ready: 0, needsReview: 0 });
+    expect(snapshot.jobs).toHaveLength(0);
+    expect(snapshot.detail).toContain("no live jobs are shown");
   });
 });

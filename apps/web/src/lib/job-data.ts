@@ -82,7 +82,9 @@ export async function getJobCatalogSnapshot(): Promise<JobCatalogSnapshot> {
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   if (!apiBaseUrl) {
-    return localJobCatalogSnapshot("NEXT_PUBLIC_API_BASE_URL is not configured; synthetic job data is shown.");
+    return localJobCatalogSnapshot(
+      "NEXT_PUBLIC_API_BASE_URL is not configured; no live jobs are shown."
+    );
   }
 
   const jobsUrl = new URL("/jobs", apiBaseUrl).toString();
@@ -96,7 +98,7 @@ export async function getJobCatalogSnapshot(): Promise<JobCatalogSnapshot> {
 
     if (!jobsResponse.ok || !summaryResponse.ok) {
       return localJobCatalogSnapshot(
-        `Jobs API returned HTTP ${jobsResponse.status}/${summaryResponse.status}; synthetic job data is shown.`,
+        `Jobs API returned HTTP ${jobsResponse.status}/${summaryResponse.status}; no live jobs are shown.`,
         jobsUrl
       );
     }
@@ -106,7 +108,8 @@ export async function getJobCatalogSnapshot(): Promise<JobCatalogSnapshot> {
 
     return {
       source: "api",
-      detail: "Jobs are loaded from deterministic synthetic adapter fixtures.",
+      detail:
+        "Live jobs are loaded from approved intake records; placeholder records stay hidden from the primary workflow.",
       checkedUrl: jobsUrl,
       summary: {
         total: summary.total,
@@ -120,7 +123,7 @@ export async function getJobCatalogSnapshot(): Promise<JobCatalogSnapshot> {
       jobs
     };
   } catch {
-    return localJobCatalogSnapshot("Jobs API is unreachable; synthetic job data is shown.", jobsUrl);
+    return localJobCatalogSnapshot("Jobs API is unreachable; no live jobs are shown.", jobsUrl);
   }
 }
 
@@ -152,46 +155,19 @@ function mapApiJobItem(job: ApiJobItem): JobItem {
 }
 
 function localJobCatalogSnapshot(detail: string, checkedUrl?: string): JobCatalogSnapshot {
-  const jobs: JobItem[] = [
-    {
-      id: "local:backend-engineer",
-      source: "greenhouse",
-      externalId: "backend-engineer",
-      title: "Backend Engineer",
-      company: "Acme Robotics",
-      locations: ["London, UK"],
-      remoteType: "onsite",
-      salaryMin: null,
-      salaryMax: null,
-      salaryCurrency: null,
-      employmentType: "full_time",
-      postedDate: "2026-03-01",
-      validThrough: null,
-      sourceUrl: "https://example.com/synthetic-backend-engineer",
-      applicationUrl: null,
-      reviewStatus: "ready",
-      reviewReasons: [],
-      extractionConfidence: 1,
-      requiredSkills: ["Python", "SQL"],
-      preferredSkills: [],
-      fixtureName: "greenhouse_missing_salary.json",
-      synthetic: true
-    }
-  ];
-
   return {
     source: "local",
     detail,
     checkedUrl,
     summary: {
-      total: jobs.length,
-      ready: 1,
+      total: 0,
+      ready: 0,
       needsReview: 0,
       remote: 0,
       hybrid: 0,
-      onsite: 1,
+      onsite: 0,
       unknownRemote: 0
     },
-    jobs
+    jobs: []
   };
 }

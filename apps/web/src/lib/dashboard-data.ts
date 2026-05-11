@@ -13,7 +13,12 @@ export type SourcePolicyAction = (typeof sourcePolicyActions)[number];
 export type SourcePolicy = {
   name: string;
   domain: string;
-  type: "ATS API" | "Structured JobPosting" | "Manual Review" | "Prohibited Platform";
+  type:
+    | "ATS API"
+    | "Public Job Board"
+    | "Structured JobPosting"
+    | "Manual Review"
+    | "Prohibited Platform";
   status: SourcePolicyStatus;
   confidence?: number;
   reviewStatus?: "approved" | "needs_review" | "prohibited";
@@ -67,7 +72,7 @@ export const dashboardData = {
       reviewStatus: "approved",
       allowedActions: ["discover", "extract", "draft"],
       deniedActions: ["autofill", "submit"],
-      reason: "Official ATS API and fixtures are approved for discovery, extraction, and drafting only."
+      reason: "Official ATS API intake is approved for discovery, extraction, and drafting only."
     },
     {
       name: "Lever",
@@ -78,7 +83,7 @@ export const dashboardData = {
       reviewStatus: "approved",
       allowedActions: ["discover", "extract", "draft"],
       deniedActions: ["autofill", "submit"],
-      reason: "Official ATS API and fixtures are approved for discovery, extraction, and drafting only."
+      reason: "Official ATS API intake is approved for discovery, extraction, and drafting only."
     },
     {
       name: "Ashby",
@@ -89,7 +94,67 @@ export const dashboardData = {
       reviewStatus: "approved",
       allowedActions: ["discover", "extract", "draft"],
       deniedActions: ["autofill", "submit"],
-      reason: "Official ATS API and fixtures are approved for discovery, extraction, and drafting only."
+      reason: "Official ATS API intake is approved for discovery, extraction, and drafting only."
+    },
+    {
+      name: "Reed",
+      domain: "reed.co.uk",
+      type: "Public Job Board",
+      status: "allowed",
+      confidence: 0.82,
+      reviewStatus: "approved",
+      allowedActions: ["discover", "extract"],
+      deniedActions: ["draft", "autofill", "submit"],
+      reason:
+        "Approved for bounded operator-queued public page discovery and extraction only; stop on login, CAPTCHA, bot detection, or access controls."
+    },
+    {
+      name: "Hays",
+      domain: "hays.co.uk",
+      type: "Public Job Board",
+      status: "allowed",
+      confidence: 0.82,
+      reviewStatus: "approved",
+      allowedActions: ["discover", "extract"],
+      deniedActions: ["draft", "autofill", "submit"],
+      reason:
+        "Approved for bounded operator-queued public page discovery and extraction only; stop on login, CAPTCHA, bot detection, or access controls."
+    },
+    {
+      name: "Totaljobs",
+      domain: "totaljobs.com",
+      type: "Public Job Board",
+      status: "allowed",
+      confidence: 0.82,
+      reviewStatus: "approved",
+      allowedActions: ["discover", "extract"],
+      deniedActions: ["draft", "autofill", "submit"],
+      reason:
+        "Approved for bounded operator-queued public page discovery and extraction only; stop on login, CAPTCHA, bot detection, or access controls."
+    },
+    {
+      name: "CityJobs",
+      domain: "cityjobs.com",
+      type: "Public Job Board",
+      status: "allowed",
+      confidence: 0.82,
+      reviewStatus: "approved",
+      allowedActions: ["discover", "extract"],
+      deniedActions: ["draft", "autofill", "submit"],
+      reason:
+        "Approved for bounded operator-queued public page discovery and extraction only; stop on login, CAPTCHA, bot detection, or access controls."
+    },
+    {
+      name: "eFinancialCareers",
+      domain: "efinancialcareers.co.uk",
+      type: "Public Job Board",
+      status: "allowed",
+      confidence: 0.82,
+      reviewStatus: "approved",
+      allowedActions: ["discover", "extract"],
+      deniedActions: ["draft", "autofill", "submit"],
+      reason:
+        "Approved for bounded operator-queued public page discovery and extraction only; stop on login, CAPTCHA, bot detection, or access controls."
     },
     {
       name: "Company careers",
@@ -122,7 +187,8 @@ export const dashboardData = {
       reviewStatus: "prohibited",
       allowedActions: [],
       deniedActions: ["discover", "extract", "draft", "autofill", "submit"],
-      reason: "No automation or submission is allowed for Indeed examples."
+      reason:
+        "Indeed is not enabled for automated discovery in Jobfinder; use manual review or an approved official integration only."
     },
     {
       name: "LinkedIn",
@@ -133,14 +199,15 @@ export const dashboardData = {
       reviewStatus: "prohibited",
       allowedActions: [],
       deniedActions: ["discover", "extract", "draft", "autofill", "submit"],
-      reason: "No automation or submission is allowed for LinkedIn examples."
+      reason:
+        "No automation or submission is allowed for LinkedIn unless an approved official integration exists."
     }
   ] satisfies SourcePolicy[],
   pipeline: [
     {
       label: "Discovered",
       count: 12,
-      description: "Synthetic postings queued from approved fixtures"
+      description: "Postings queued from approved sources"
     },
     {
       label: "Extracted",
@@ -175,15 +242,15 @@ export const dashboardData = {
       id: "audit-1005",
       actor: "system",
       action: "Source policy evaluated",
-      subject: "greenhouse-adapter-fixture",
-      provenance: "source-policy:v0 fixture:greenhouse-board",
+      subject: "greenhouse-intake",
+      provenance: "source-policy:v0 source:greenhouse-board",
       occurredAt: "09:42"
     },
     {
       id: "audit-1004",
       actor: "policy",
       action: "Submission blocked",
-      subject: "indeed-apply-fixture",
+      subject: "indeed-apply",
       provenance: "policy-registry:v0 prohibited_action:submit",
       occurredAt: "09:38"
     },
@@ -191,7 +258,7 @@ export const dashboardData = {
       id: "audit-1003",
       actor: "system",
       action: "Extraction confidence recorded",
-      subject: "ashby-role-fixture",
+      subject: "ashby-role",
       provenance: "json_ld:JobPosting field_provenance:required_skills",
       occurredAt: "09:27"
     },
@@ -200,14 +267,14 @@ export const dashboardData = {
       actor: "reviewer",
       action: "Claim evidence requested",
       subject: "tailored-cover-letter-draft",
-      provenance: "claim-validation:v0 evidence_bank:synthetic",
+      provenance: "claim-validation:v0 evidence_bank:approved",
       occurredAt: "09:14"
     },
     {
       id: "audit-1001",
       actor: "system",
       action: "Draft held for approval",
-      subject: "lever-application-fixture",
+      subject: "lever-application",
       provenance: "approval-gate:v0 risk:medium",
       occurredAt: "09:03"
     }

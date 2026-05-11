@@ -11,7 +11,7 @@ import {
 describe("dashboardData", () => {
   it("summarizes source policy decisions without counting blocked sources as allowed", () => {
     expect(getSourcePolicySummary(dashboardData.sourcePolicies)).toEqual({
-      allowed: 3,
+      allowed: 8,
       manualOnly: 2,
       blocked: 2
     });
@@ -22,11 +22,11 @@ describe("dashboardData", () => {
     expect(getReviewQueueTotal(dashboardData.reviewQueue)).toBe(17);
   });
 
-  it("ships audit events with immutable labels and synthetic subjects", () => {
+  it("ships audit events with immutable labels and source subjects", () => {
     expect(dashboardData.auditFeed).toHaveLength(5);
     expect(dashboardData.auditFeed[0]).toMatchObject({
       actor: "system",
-      subject: "greenhouse-adapter-fixture"
+      subject: "greenhouse-intake"
     });
     expect(dashboardData.auditFeed.every((event) => event.provenance !== "")).toBe(true);
   });
@@ -53,6 +53,17 @@ describe("dashboardData", () => {
     expect(decision.allowed).toBe(false);
     expect(decision.policy.status).toBe("blocked");
     expect(decision.policy.deniedActions).toContain("submit");
-    expect(decision.reason).toContain("No automation or submission");
+    expect(decision.reason).toContain("official integration");
+  });
+
+  it("allows bounded public intake for approved UK job boards", () => {
+    const decision = evaluateSourcePolicyLocally({
+      domain: "reed.co.uk",
+      action: "discover"
+    });
+
+    expect(decision.allowed).toBe(true);
+    expect(decision.policy.status).toBe("allowed");
+    expect(decision.policy.deniedActions).toContain("submit");
   });
 });

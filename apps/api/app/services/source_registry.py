@@ -122,6 +122,33 @@ class SourceRegistryService:
 
     def seed_known_source_policies(self) -> list[SourcePolicy]:
         policies: list[SourcePolicy] = []
+        for known in KNOWN_GOVERNED_LIVE_SOURCES:
+            source = self.upsert_source(
+                domain=known["domain"],
+                name=known["name"],
+                source_type="public_job_board",
+                base_url=f"https://{known['domain']}",
+            )
+            policy = self._upsert_latest_policy(
+                source_id=source.id,
+                status="approved",
+                reason=KNOWN_GOVERNED_LIVE_REASON,
+                allowed_actions=[PolicyAction.DISCOVER, PolicyAction.EXTRACT],
+                denied_actions=[PolicyAction.DRAFT, PolicyAction.AUTOFILL, PolicyAction.SUBMIT],
+                evidence=[
+                    SourcePolicyEvidenceCreate(
+                        evidence_type="operator_source_review",
+                        url=f"https://{known['domain']}",
+                        excerpt=(
+                            "Approved for bounded operator-queued public page discovery and "
+                            "extraction. Stop at login, CAPTCHA, bot-detection, access controls, "
+                            "or external submission."
+                        ),
+                    )
+                ],
+            )
+            policies.append(policy)
+
         for known in KNOWN_PROHIBITED_SOURCES:
             source = self.upsert_source(
                 domain=known["domain"],
@@ -137,11 +164,11 @@ class SourceRegistryService:
                 denied_actions=list(PolicyAction),
                 evidence=[
                     SourcePolicyEvidenceCreate(
-                        evidence_type="synthetic_policy_review",
+                        evidence_type="operator_source_review",
                         url=f"https://{known['domain']}",
                         excerpt=(
-                            "Synthetic phase-2 guardrail: automated workflow is denied unless "
-                            "an approved official integration is configured."
+                            "Automated workflow is denied unless an approved official integration "
+                            "is configured."
                         ),
                     )
                 ],
@@ -220,6 +247,21 @@ class SourceRegistryService:
                     captured_at=datetime.now(UTC),
                 )
             )
+
+
+KNOWN_GOVERNED_LIVE_REASON = (
+    "Approved for bounded operator-queued public page discovery and extraction only; stop on "
+    "login, CAPTCHA, bot detection, access controls, autofill, or external submission."
+)
+
+
+KNOWN_GOVERNED_LIVE_SOURCES = [
+    {"domain": "reed.co.uk", "name": "Reed"},
+    {"domain": "hays.co.uk", "name": "Hays"},
+    {"domain": "totaljobs.com", "name": "Totaljobs"},
+    {"domain": "cityjobs.com", "name": "CityJobs"},
+    {"domain": "efinancialcareers.co.uk", "name": "eFinancialCareers"},
+]
 
 
 KNOWN_PROHIBITED_REASON = (

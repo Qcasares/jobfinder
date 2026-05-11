@@ -64,7 +64,6 @@ import {
 import {
   dashboardData,
   evaluateSourcePolicyLocally,
-  getPipelineTotal,
   getSourcePolicySummary,
   sourcePolicyActions,
   type ReviewQueueItem as ReviewQueueBucket,
@@ -94,7 +93,7 @@ const navigationAreas = [
     label: "Job Search",
     value: "job-search",
     icon: Search,
-    description: "Review synthetic matches, profile evidence, and application progress."
+    description: "Review live job matches, profile evidence, and application progress."
   },
   {
     label: "Administration",
@@ -144,32 +143,32 @@ const helpContent = {
     ],
     guardrails: [
       "Review-first mode is active.",
-      "Use synthetic job/profile examples unless candidate vault metadata is explicitly enabled.",
-      "Live discovery and packet preparation stay behind runtime flags, source policies, and manual review."
+      "Only approved external intake records are shown in the primary workflow.",
+      "Discovery and packet preparation stay behind runtime flags, source policies, and manual review."
     ]
   },
   profile: {
-    shows: "The profile, evidence, and job preferences used for local matching examples.",
+    shows: "The connected profile, evidence, and job preferences used for matching.",
     actions: [
       "Check that profile evidence is complete enough for review.",
       "Use job preferences to understand the current matching criteria.",
       "Keep real CV, contact, and private candidate data out of this workspace."
     ],
     guardrails: [
-      "Synthetic profile data only.",
+      "Profile data stays disconnected until approved evidence or vault metadata is enabled.",
       "Candidate evidence is audited when changed.",
       "Claims must map back to approved evidence before later phases can use them."
     ]
   },
   jobs: {
-    shows: "Fixture-backed job examples with source, location, pay, skills, and review status.",
+    shows: "Live job records with source, location, pay, skills, and review status.",
     actions: [
       "Scan ready jobs first.",
       "Use review status to identify jobs that need human checks.",
-      "Treat fixture names as diagnostics, not end-user content."
+      "Queue approved public source URLs from the Operator Console."
     ],
     guardrails: [
-      "Jobs are synthetic examples.",
+      "Only approved source-policy intake records are shown.",
       "Extraction confidence does not authorize automation.",
       "Submission remains disabled."
     ]
@@ -279,8 +278,8 @@ export function DashboardShell({
   const [activeView, setActiveView] = useState<DashboardView>("job-overview");
   const [helpOpen, setHelpOpen] = useState(false);
   const policySummary = getSourcePolicySummary(dashboardData.sourcePolicies);
-  const pipelineTotal = getPipelineTotal(dashboardData.pipeline);
-  const reviewTotal = reviewSnapshot.summary.needsReview;
+  const liveJobs = liveJobItems(jobSnapshot.jobs);
+  const liveReviewTotal = reviewSnapshot.items.filter((item) => !item.synthetic).length;
   const isProfileView = activeView === "profile";
   const isSourcesView = activeView === "admin-sources";
   const isJobsView = activeView === "jobs";
@@ -424,9 +423,11 @@ export function DashboardShell({
                   </>
                 ) : (
                   <>
-                    <Badge tone="info">{pipelineTotal} jobs tracked</Badge>
-                    <Badge tone={reviewTotal > 0 ? "warning" : "success"}>
-                      {reviewTotal} reviews needed
+                    <Badge tone={liveJobs.length > 0 ? "success" : "warning"}>
+                      {liveJobs.length} live jobs
+                    </Badge>
+                    <Badge tone={liveReviewTotal > 0 ? "warning" : "success"}>
+                      {liveReviewTotal} live reviews
                     </Badge>
                     <Badge tone="info">
                       {applicationSnapshot.summary.total} applications
@@ -514,7 +515,11 @@ function JobSearchOverview({
         />
         <CandidateProfilePanel snapshot={candidateSnapshot} />
         <JobsPreviewPanel snapshot={jobSnapshot} />
-        <PipelinePanel />
+        <PipelinePanel
+          jobSnapshot={jobSnapshot}
+          reviewSnapshot={reviewSnapshot}
+          applicationSnapshot={applicationSnapshot}
+        />
         <ApplicationTrackerPreview snapshot={applicationSnapshot} />
       </section>
       <section className="grid content-start gap-4">
@@ -537,12 +542,12 @@ function SafeLocalModeIntro() {
       <CardContent className="flex items-start gap-3">
         <ShieldCheck className="mt-0.5 size-5 shrink-0 text-blue-700" aria-hidden="true" />
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-blue-950">Review-first operating mode</p>
+          <p className="text-sm font-semibold text-blue-950">Live job board intake</p>
           <p className="mt-1 text-sm leading-5 text-blue-900">
-            Review synthetic job matches, profile evidence, application status, and approval
-            gates. Jobfinder can expose gated live intake and review packets when runtime flags
-            are enabled; browser execution, credential capture, and external submissions remain
-            blocked.
+            Jobfinder is configured for governed live intake from approved public job sources.
+            Reed, Hays, Totaljobs, CityJobs, and eFinancialCareers can be queued for bounded
+            discovery and extraction. Indeed remains manual-only unless an approved official
+            integration is configured.
           </p>
         </div>
       </CardContent>
@@ -561,15 +566,17 @@ function NextActionPanel({
   approvalSnapshot: ApprovalSnapshot;
   applicationSnapshot: ApplicationSnapshot;
 }) {
+  const liveJobs = liveJobItems(jobSnapshot.jobs);
+  const liveReviewCount = reviewSnapshot.items.filter((item) => !item.synthetic).length;
   const actions = [
     {
       label: "Review job matches",
-      detail: `${reviewSnapshot.summary.needsReview} jobs need a human check before they can move forward.`,
-      tone: reviewSnapshot.summary.needsReview > 0 ? "warning" : "success"
+      detail: `${liveReviewCount} live jobs need a human check before they can move forward.`,
+      tone: liveReviewCount > 0 ? "warning" : "success"
     },
     {
       label: "Track applications",
-      detail: `${applicationSnapshot.summary.total} applications are in the local tracker.`,
+      detail: `${applicationSnapshot.summary.total} applications are in the tracker.`,
       tone: "info"
     },
     {
@@ -585,10 +592,10 @@ function NextActionPanel({
         <div>
           <CardTitle>Job Search Overview</CardTitle>
           <p className="mt-1 text-sm text-muted-foreground">
-            Start here to see matches, review work, and application progress.
+            Start here to import live postings, review matches, and track applications.
           </p>
         </div>
-        <Badge tone="info">{jobSnapshot.summary.total} jobs</Badge>
+        <Badge tone={liveJobs.length > 0 ? "success" : "warning"}>{liveJobs.length} live jobs</Badge>
       </CardHeader>
       <CardContent className="grid gap-3 md:grid-cols-3">
         {actions.map((action) => (
@@ -625,6 +632,15 @@ function CandidateWorkspace({
 }
 
 function CandidateProfilePanel({ snapshot }: { snapshot: CandidateWorkspaceSnapshot }) {
+  const profileConnected = !snapshot.profile.synthetic;
+  const displayName = profileConnected
+    ? snapshot.profile.profileName
+    : "Candidate profile not connected";
+  const displaySummary =
+    profileConnected && snapshot.profile.summary
+      ? snapshot.profile.summary
+      : "Connect approved profile evidence or encrypted candidate vault metadata before using profile data for matching.";
+
   return (
     <Card>
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -635,18 +651,24 @@ function CandidateProfilePanel({ snapshot }: { snapshot: CandidateWorkspaceSnaps
       </CardHeader>
       <CardContent className="grid gap-4">
         <div>
-          <p className="text-lg font-semibold">{snapshot.profile.profileName}</p>
+          <p className="text-lg font-semibold">{displayName}</p>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
-            {snapshot.profile.summary ?? "No synthetic summary provided."}
+            {displaySummary}
           </p>
         </div>
         <div className="grid gap-3 sm:grid-cols-3">
-          <MetricTile label="Evidence" value={snapshot.evidence.length} />
-          <MetricTile label="Preferences" value={snapshot.searchCriteria.length} />
-          <MetricTile label="Synthetic Profile" value={snapshot.profile.synthetic ? 1 : 0} />
+          <MetricTile
+            label="Evidence"
+            value={snapshot.evidence.filter((item) => !item.synthetic).length}
+          />
+          <MetricTile
+            label="Preferences"
+            value={snapshot.searchCriteria.filter((item) => !item.synthetic).length}
+          />
+          <MetricTile label="Connected Profile" value={profileConnected ? 1 : 0} />
         </div>
         <p className="break-words rounded-md bg-muted px-3 py-2 font-mono text-xs text-muted-foreground">
-          {snapshot.profile.id}
+          {profileConnected ? snapshot.profile.id : "profile connection pending"}
         </p>
       </CardContent>
     </Card>
@@ -654,55 +676,76 @@ function CandidateProfilePanel({ snapshot }: { snapshot: CandidateWorkspaceSnaps
 }
 
 function CandidateEvidencePanel({ evidence }: { evidence: readonly CandidateEvidence[] }) {
+  const liveEvidence = evidence.filter((item) => !item.synthetic);
   return (
     <Card>
       <CardHeader>
         <CardTitle>Profile Evidence</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-3">
-        {evidence.map((item) => (
-          <div key={item.id} className="rounded-md border border-border px-3 py-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{item.title}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{item.evidenceType}</p>
-              </div>
-              {item.synthetic ? <Badge tone="info">synthetic</Badge> : null}
-            </div>
-            <p className="mt-3 text-sm leading-5 text-muted-foreground">
-              {item.description ?? "No description."}
+        {liveEvidence.length === 0 ? (
+          <div className="rounded-md border border-border bg-muted/40 px-3 py-4">
+            <p className="text-sm font-medium">No approved profile evidence connected.</p>
+            <p className="mt-2 text-sm leading-5 text-muted-foreground">
+              Add evidence through the governed candidate vault flow before using profile data for
+              matching or drafting.
             </p>
-            {item.sourceUrl ? (
-              <p className="mt-2 break-words font-mono text-xs text-muted-foreground">
-                {item.sourceUrl}
-              </p>
-            ) : null}
           </div>
-        ))}
+        ) : (
+          liveEvidence.map((item) => (
+            <div key={item.id} className="rounded-md border border-border px-3 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{item.title}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{item.evidenceType}</p>
+                </div>
+              </div>
+              <p className="mt-3 text-sm leading-5 text-muted-foreground">
+                {item.description ?? "No description."}
+              </p>
+              {item.sourceUrl ? (
+                <p className="mt-2 break-words font-mono text-xs text-muted-foreground">
+                  {item.sourceUrl}
+                </p>
+              ) : null}
+            </div>
+          ))
+        )}
       </CardContent>
     </Card>
   );
 }
 
 function CandidateCriteriaPanel({ criteria }: { criteria: readonly SearchCriteria[] }) {
+  const liveCriteria = criteria.filter((item) => !item.synthetic);
   return (
     <Card>
       <CardHeader>
         <CardTitle>Job Preferences</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-3">
-        {criteria.map((item) => (
-          <div key={item.id} className="rounded-md border border-border px-3 py-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm font-medium">{item.name}</p>
-              <Badge tone={remoteTone(item.remoteType)}>{item.remoteType}</Badge>
-            </div>
-            <p className="mt-2 text-sm leading-5 text-muted-foreground">{item.query}</p>
-            <p className="mt-2 font-mono text-xs text-muted-foreground">
-              {item.location ?? "location open"} / {formatCriteriaSalary(item)}
+        {liveCriteria.length === 0 ? (
+          <div className="rounded-md border border-border bg-muted/40 px-3 py-4">
+            <p className="text-sm font-medium">No live search preferences configured.</p>
+            <p className="mt-2 text-sm leading-5 text-muted-foreground">
+              Use Administration to queue approved job-board URLs while profile preferences are
+              being connected.
             </p>
           </div>
-        ))}
+        ) : (
+          liveCriteria.map((item) => (
+            <div key={item.id} className="rounded-md border border-border px-3 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-medium">{item.name}</p>
+                <Badge tone={remoteTone(item.remoteType)}>{item.remoteType}</Badge>
+              </div>
+              <p className="mt-2 text-sm leading-5 text-muted-foreground">{item.query}</p>
+              <p className="mt-2 font-mono text-xs text-muted-foreground">
+                {item.location ?? "location open"} / {formatCriteriaSalary(item)}
+              </p>
+            </div>
+          ))
+        )}
       </CardContent>
     </Card>
   );
@@ -715,7 +758,10 @@ function CandidateSafetyPanel({ snapshot }: { snapshot: CandidateWorkspaceSnapsh
         <CardTitle>Profile Data Safety</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-3">
-        <p className="text-sm leading-5 text-muted-foreground">{snapshot.safetyNote}</p>
+        <p className="text-sm leading-5 text-muted-foreground">
+          Candidate profile data is only used after it is explicitly connected through approved
+          evidence or candidate vault metadata.
+        </p>
         {snapshot.checkedUrl ? (
           <p className="break-words rounded-md bg-muted px-3 py-2 font-mono text-xs text-muted-foreground">
             {snapshot.checkedUrl}
@@ -733,10 +779,11 @@ function JobsWorkspace({
   snapshot: JobCatalogSnapshot;
   health: ApiHealthStatus;
 }) {
+  const liveJobs = liveJobItems(snapshot.jobs);
   return (
     <div className="grid gap-4 p-4 sm:p-6 xl:grid-cols-[1.55fr_0.95fr]">
       <section className="grid gap-4">
-        <JobCatalogTable jobs={snapshot.jobs} />
+        <JobCatalogTable jobs={liveJobs} />
       </section>
       <section className="grid content-start gap-4">
         <JobSummaryPanel snapshot={snapshot} />
@@ -848,10 +895,12 @@ function ReviewWorkspace({
   approvalSnapshot: ApprovalSnapshot;
   health: ApiHealthStatus;
 }) {
+  const liveReviewItems = reviewSnapshot.items.filter((item) => !item.synthetic);
+
   return (
     <div className="grid gap-4 p-4 sm:p-6 xl:grid-cols-[1.55fr_0.95fr]">
       <section className="grid gap-4">
-        <ReviewQueueTable items={reviewSnapshot.items} />
+        <ReviewQueueTable items={liveReviewItems} />
       </section>
       <section className="grid content-start gap-4">
         <ReviewSummaryPanel snapshot={reviewSnapshot} />
@@ -894,7 +943,7 @@ function SourceRegistryPanel({ policies }: { policies: readonly SourcePolicy[] }
         <div>
           <CardTitle>Source Registry</CardTitle>
           <p className="mt-1 text-xs text-muted-foreground">
-            Policy posture is local fixture data unless the API check is configured.
+            Policy posture uses local fallback data unless the API check is configured.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -1169,7 +1218,7 @@ function PolicyCheckPanel({ policies }: { policies: readonly SourcePolicy[] }) {
       setResult({
         ...localDecision,
         decisionSource: "local",
-        detail: "NEXT_PUBLIC_API_BASE_URL is not configured; synthetic local policy was used."
+        detail: "NEXT_PUBLIC_API_BASE_URL is not configured; local policy fallback was used."
       });
       setIsChecking(false);
       return;
@@ -1305,15 +1354,48 @@ function PolicyCheckPanel({ policies }: { policies: readonly SourcePolicy[] }) {
   );
 }
 
-function PipelinePanel() {
+function PipelinePanel({
+  jobSnapshot,
+  reviewSnapshot,
+  applicationSnapshot
+}: {
+  jobSnapshot: JobCatalogSnapshot;
+  reviewSnapshot: ReviewQueueSnapshot;
+  applicationSnapshot: ApplicationSnapshot;
+}) {
+  const liveJobs = liveJobItems(jobSnapshot.jobs);
+  const liveReviewCount = reviewSnapshot.items.filter((item) => !item.synthetic).length;
+  const columns = [
+    {
+      label: "Imported",
+      count: liveJobs.length,
+      description: "Live postings imported from approved job-board or ATS sources."
+    },
+    {
+      label: "Needs Review",
+      count: liveReviewCount,
+      description: "Live postings waiting for source, confidence, or evidence review."
+    },
+    {
+      label: "Ready",
+      count: liveJobs.filter((job) => job.reviewStatus === "ready").length,
+      description: "Live postings ready for operator review and application tracking."
+    },
+    {
+      label: "Applications",
+      count: applicationSnapshot.summary.total,
+      description: "Application tracker records created from approved live postings."
+    }
+  ];
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Application Progress</CardTitle>
+        <CardTitle>Live Pipeline</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid gap-3 md:grid-cols-5">
-          {dashboardData.pipeline.map((column) => (
+        <div className="grid gap-3 md:grid-cols-4">
+          {columns.map((column) => (
             <div
               key={column.label}
               className="min-h-36 rounded-card border border-border bg-muted/40 p-3"
@@ -1360,7 +1442,7 @@ function ReviewQueuePanel({ items }: { items: readonly ReviewQueueBucket[] }) {
 }
 
 function JobsPreviewPanel({ snapshot }: { snapshot: JobCatalogSnapshot }) {
-  const visibleJobs = snapshot.jobs.slice(0, 4);
+  const visibleJobs = liveJobItems(snapshot.jobs).slice(0, 4);
 
   return (
     <Card>
@@ -1370,32 +1452,47 @@ function JobsPreviewPanel({ snapshot }: { snapshot: JobCatalogSnapshot }) {
           <Badge tone={snapshot.source === "api" ? "info" : "warning"}>
             {formatDataSource(snapshot.source)}
           </Badge>
-          <Badge tone="info">{snapshot.summary.total} jobs</Badge>
+          <Badge tone={visibleJobs.length > 0 ? "success" : "warning"}>
+            {visibleJobs.length} live jobs
+          </Badge>
         </div>
       </CardHeader>
       <CardContent className="grid gap-3">
-        {visibleJobs.map((job) => (
-          <div
-            key={job.id}
-            className="grid gap-3 rounded-md border border-border px-3 py-3 md:grid-cols-[1.4fr_0.8fr_auto]"
-          >
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium">{job.title}</p>
-              <p className="mt-1 truncate text-xs text-muted-foreground">{job.company}</p>
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-xs text-muted-foreground">{job.source}</p>
-              <p className="mt-1 truncate font-mono text-xs text-muted-foreground">
-                {job.fixtureName ?? job.externalId}
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 md:justify-end">
-              <Badge tone={remoteTone(job.remoteType)}>{job.remoteType}</Badge>
-              <ReviewStatusBadge status={job.reviewStatus} />
-            </div>
+        {visibleJobs.length === 0 ? (
+          <div className="rounded-md border border-border bg-muted/40 px-3 py-4">
+            <p className="text-sm font-medium">No live jobs imported yet.</p>
+            <p className="mt-2 text-sm leading-5 text-muted-foreground">
+              Use the Operator Console to queue approved public URLs from Reed, Hays, Totaljobs,
+              CityJobs, or eFinancialCareers.
+            </p>
           </div>
-        ))}
-        <p className="text-sm leading-5 text-muted-foreground">{snapshot.detail}</p>
+        ) : (
+          visibleJobs.map((job) => (
+            <div
+              key={job.id}
+              className="grid gap-3 rounded-md border border-border px-3 py-3 md:grid-cols-[1.4fr_0.8fr_auto]"
+            >
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium">{job.title}</p>
+                <p className="mt-1 truncate text-xs text-muted-foreground">{job.company}</p>
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-xs text-muted-foreground">{job.source}</p>
+                <p className="mt-1 truncate font-mono text-xs text-muted-foreground">
+                  {job.externalId}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 md:justify-end">
+                <Badge tone={remoteTone(job.remoteType)}>{job.remoteType}</Badge>
+                <ReviewStatusBadge status={job.reviewStatus} />
+              </div>
+            </div>
+          ))
+        )}
+        <p className="text-sm leading-5 text-muted-foreground">
+          Live job data appears here after approved source intake. Placeholder records are hidden
+          from the primary job search workflow.
+        </p>
       </CardContent>
     </Card>
   );
@@ -1429,6 +1526,10 @@ function ApplicationTrackerPreview({ snapshot }: { snapshot: ApplicationSnapshot
 }
 
 function JobSummaryPanel({ snapshot }: { snapshot: JobCatalogSnapshot }) {
+  const liveJobs = liveJobItems(snapshot.jobs);
+  const readyLiveJobs = liveJobs.filter((job) => job.reviewStatus === "ready").length;
+  const liveNeedsReview = liveJobs.filter((job) => job.reviewStatus === "needs_review").length;
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-3">
@@ -1439,14 +1540,25 @@ function JobSummaryPanel({ snapshot }: { snapshot: JobCatalogSnapshot }) {
       </CardHeader>
       <CardContent className="grid gap-4">
         <div className="grid grid-cols-2 gap-2">
-          <MetricTile label="Total" value={snapshot.summary.total} />
-          <MetricTile label="Ready" value={snapshot.summary.ready} />
-          <MetricTile label="Needs Review" value={snapshot.summary.needsReview} />
-          <MetricTile label="Remote" value={snapshot.summary.remote} />
-          <MetricTile label="Hybrid" value={snapshot.summary.hybrid} />
-          <MetricTile label="Onsite" value={snapshot.summary.onsite} />
+          <MetricTile label="Live Total" value={liveJobs.length} />
+          <MetricTile label="Ready" value={readyLiveJobs} />
+          <MetricTile label="Needs Review" value={liveNeedsReview} />
+          <MetricTile
+            label="Remote"
+            value={liveJobs.filter((job) => job.remoteType === "remote").length}
+          />
+          <MetricTile
+            label="Hybrid"
+            value={liveJobs.filter((job) => job.remoteType === "hybrid").length}
+          />
+          <MetricTile
+            label="Onsite"
+            value={liveJobs.filter((job) => job.remoteType === "onsite").length}
+          />
         </div>
-        <p className="text-sm leading-5 text-muted-foreground">{snapshot.detail}</p>
+        <p className="text-sm leading-5 text-muted-foreground">
+          Live totals count approved external intake records only.
+        </p>
         {snapshot.checkedUrl ? (
           <p className="break-words rounded-md bg-muted px-3 py-2 font-mono text-xs text-muted-foreground">
             {snapshot.checkedUrl}
@@ -1525,6 +1637,12 @@ function RuntimeSettingsPanel({ snapshot }: { snapshot: SettingsSnapshot }) {
 }
 
 function ReviewSummaryPanel({ snapshot }: { snapshot: ReviewQueueSnapshot }) {
+  const liveItems = snapshot.items.filter((item) => !item.synthetic);
+  const readyLiveItems = liveItems.filter((item) => item.reviewStatus === "ready").length;
+  const needsReviewLiveItems = liveItems.filter(
+    (item) => item.reviewStatus === "needs_review"
+  ).length;
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-3">
@@ -1535,11 +1653,13 @@ function ReviewSummaryPanel({ snapshot }: { snapshot: ReviewQueueSnapshot }) {
       </CardHeader>
       <CardContent className="grid gap-4">
         <div className="grid grid-cols-3 gap-2">
-          <MetricTile label="Total" value={snapshot.summary.total} />
-          <MetricTile label="Ready" value={snapshot.summary.ready} />
-          <MetricTile label="Needs Review" value={snapshot.summary.needsReview} />
+          <MetricTile label="Live Total" value={liveItems.length} />
+          <MetricTile label="Ready" value={readyLiveItems} />
+          <MetricTile label="Needs Review" value={needsReviewLiveItems} />
         </div>
-        <p className="text-sm leading-5 text-muted-foreground">{snapshot.detail}</p>
+        <p className="text-sm leading-5 text-muted-foreground">
+          Live review totals count approved external intake records only.
+        </p>
         {snapshot.checkedUrl ? (
           <p className="break-words rounded-md bg-muted px-3 py-2 font-mono text-xs text-muted-foreground">
             {snapshot.checkedUrl}
@@ -1589,9 +1709,15 @@ function ApprovalRequestsPanel({ snapshot }: { snapshot: ApprovalSnapshot }) {
           <MetricTile label="Changes" value={snapshot.summary.needsChanges} />
         </div>
         <div className="grid gap-3">
-          {snapshot.requests.map((request) => (
-            <ApprovalRequestRow key={request.id} request={request} />
-          ))}
+          {snapshot.requests.length === 0 ? (
+            <p className="rounded-md border border-border px-3 py-3 text-sm text-muted-foreground">
+              No approval requests are waiting.
+            </p>
+          ) : (
+            snapshot.requests.map((request) => (
+              <ApprovalRequestRow key={request.id} request={request} />
+            ))
+          )}
         </div>
         <p className="text-sm leading-5 text-muted-foreground">{snapshot.detail}</p>
         {snapshot.checkedUrl ? (
@@ -1708,7 +1834,6 @@ function ApprovalRequestRow({ request }: { request: ApprovalRequestItem }) {
       ) : null}
       <div className="mt-3 flex flex-wrap gap-2">
         <Badge tone="neutral">{request.sideEffect}</Badge>
-        {request.synthetic ? <Badge tone="info">synthetic</Badge> : null}
       </div>
     </div>
   );
@@ -1727,11 +1852,20 @@ function JobCatalogTable({ jobs }: { jobs: readonly JobItem[] }) {
   return (
     <Card>
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <CardTitle>Jobs</CardTitle>
-        <Badge tone="info">{jobs.length} jobs</Badge>
+        <CardTitle>Live Jobs</CardTitle>
+        <Badge tone={jobs.length > 0 ? "success" : "warning"}>{jobs.length} live jobs</Badge>
       </CardHeader>
       <CardContent className="overflow-x-auto p-0">
-        <table className="min-w-[1100px] border-separate border-spacing-0 text-sm">
+        {jobs.length === 0 ? (
+          <div className="grid gap-3 px-4 py-8">
+            <p className="text-sm font-medium">No live jobs imported yet.</p>
+            <p className="max-w-2xl text-sm leading-5 text-muted-foreground">
+              Queue approved source URLs from the Operator Console. Jobfinder will stop at manual
+              handoff if a page presents login, CAPTCHA, bot detection, or access controls.
+            </p>
+          </div>
+        ) : (
+          <table className="min-w-[1100px] border-separate border-spacing-0 text-sm">
           <thead>
             <tr className="text-left text-xs uppercase tracking-[0.12em] text-muted-foreground">
               <th className="border-b border-border px-4 py-3 font-semibold">Job</th>
@@ -1756,7 +1890,7 @@ function JobCatalogTable({ jobs }: { jobs: readonly JobItem[] }) {
                 <td className="border-b border-border px-4 py-3 align-top">
                   <p className="font-medium">{job.source}</p>
                   <p className="mt-1 font-mono text-xs text-muted-foreground">
-                    {job.fixtureName ?? "synthetic fixture"}
+                    {job.externalId}
                   </p>
                 </td>
                 <td className="border-b border-border px-4 py-3 align-top">
@@ -1775,14 +1909,13 @@ function JobCatalogTable({ jobs }: { jobs: readonly JobItem[] }) {
                 </td>
                 <td className="border-b border-border px-4 py-3 text-right align-top font-mono text-xs">
                   {Math.round(job.extractionConfidence * 100)}%
-                  <p className="mt-2 text-muted-foreground">
-                    {job.synthetic ? "synthetic" : "external"}
-                  </p>
+                  <p className="mt-2 text-muted-foreground">live</p>
                 </td>
               </tr>
             ))}
           </tbody>
-        </table>
+          </table>
+        )}
       </CardContent>
     </Card>
   );
@@ -1846,7 +1979,6 @@ function ApplicationTable({ applications }: { applications: readonly Application
                       <Badge tone={application.safety.autofillPerformed ? "danger" : "success"}>
                         autofilled {application.safety.autofillPerformed ? "yes" : "no"}
                       </Badge>
-                      {application.synthetic ? <Badge tone="info">synthetic</Badge> : null}
                     </div>
                   </td>
                   <td className="border-b border-border px-4 py-3 text-right align-top font-mono text-xs text-muted-foreground">
@@ -2433,58 +2565,72 @@ function ReviewQueueTable({ items }: { items: readonly ReviewJobItem[] }) {
         <Badge tone="info">{items.length} jobs</Badge>
       </CardHeader>
       <CardContent className="overflow-x-auto p-0">
-        <table className="min-w-[1040px] border-separate border-spacing-0 text-sm">
-          <thead>
-            <tr className="text-left text-xs uppercase tracking-[0.12em] text-muted-foreground">
-              <th className="border-b border-border px-4 py-3 font-semibold">Job</th>
-              <th className="border-b border-border px-4 py-3 font-semibold">Source</th>
-              <th className="border-b border-border px-4 py-3 font-semibold">Location</th>
-              <th className="border-b border-border px-4 py-3 font-semibold">Pay</th>
-              <th className="border-b border-border px-4 py-3 font-semibold">Skills</th>
-              <th className="border-b border-border px-4 py-3 font-semibold">Status</th>
-              <th className="border-b border-border px-4 py-3 text-right font-semibold">
-                Confidence
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item) => (
-              <tr key={item.id}>
-                <td className="border-b border-border px-4 py-3 align-top">
-                  <p className="font-medium">{item.title || "Untitled posting"}</p>
-                  <p className="mt-1 text-muted-foreground">{item.company || "Unknown company"}</p>
-                  <p className="mt-1 font-mono text-xs text-muted-foreground">{item.externalId}</p>
-                </td>
-                <td className="border-b border-border px-4 py-3 align-top">
-                  <p className="font-medium">{item.source}</p>
-                  <p className="mt-1 font-mono text-xs text-muted-foreground">
-                    {item.fixtureName ?? item.dataOrigin}
-                  </p>
-                </td>
-                <td className="border-b border-border px-4 py-3 align-top">
-                  <Badge tone={remoteTone(item.remoteType)}>{item.remoteType}</Badge>
-                  <p className="mt-2 text-muted-foreground">{item.locations.join(", ")}</p>
-                </td>
-                <td className="border-b border-border px-4 py-3 align-top text-muted-foreground">
-                  {formatSalary(item)}
-                </td>
-                <td className="max-w-xs border-b border-border px-4 py-3 align-top">
-                  <SkillList skills={[...item.requiredSkills, ...item.preferredSkills]} />
-                </td>
-                <td className="border-b border-border px-4 py-3 align-top">
-                  <ReviewStatusBadge status={item.reviewStatus} />
-                  <ReviewReasons reasons={item.reviewReasons} />
-                </td>
-                <td className="border-b border-border px-4 py-3 text-right align-top font-mono text-xs">
-                  {Math.round(item.extractionConfidence * 100)}%
-                  <p className="mt-2 text-muted-foreground">
-                    {lowestProvenanceHint(item)?.fieldName ?? "provenance"}
-                  </p>
-                </td>
+        {items.length === 0 ? (
+          <div className="grid gap-2 px-4 py-8 text-sm text-muted-foreground">
+            <p className="font-medium text-foreground">No live reviews are waiting.</p>
+            <p>
+              Queue approved source URLs in the Operator Console; records that need human review
+              will appear here after extraction.
+            </p>
+          </div>
+        ) : (
+          <table className="min-w-[1040px] border-separate border-spacing-0 text-sm">
+            <thead>
+              <tr className="text-left text-xs uppercase tracking-[0.12em] text-muted-foreground">
+                <th className="border-b border-border px-4 py-3 font-semibold">Job</th>
+                <th className="border-b border-border px-4 py-3 font-semibold">Source</th>
+                <th className="border-b border-border px-4 py-3 font-semibold">Location</th>
+                <th className="border-b border-border px-4 py-3 font-semibold">Pay</th>
+                <th className="border-b border-border px-4 py-3 font-semibold">Skills</th>
+                <th className="border-b border-border px-4 py-3 font-semibold">Status</th>
+                <th className="border-b border-border px-4 py-3 text-right font-semibold">
+                  Confidence
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {items.map((item) => (
+                <tr key={item.id}>
+                  <td className="border-b border-border px-4 py-3 align-top">
+                    <p className="font-medium">{item.title || "Untitled posting"}</p>
+                    <p className="mt-1 text-muted-foreground">
+                      {item.company || "Unknown company"}
+                    </p>
+                    <p className="mt-1 font-mono text-xs text-muted-foreground">
+                      {item.externalId}
+                    </p>
+                  </td>
+                  <td className="border-b border-border px-4 py-3 align-top">
+                    <p className="font-medium">{item.source}</p>
+                    <p className="mt-1 font-mono text-xs text-muted-foreground">
+                      {item.externalId}
+                    </p>
+                  </td>
+                  <td className="border-b border-border px-4 py-3 align-top">
+                    <Badge tone={remoteTone(item.remoteType)}>{item.remoteType}</Badge>
+                    <p className="mt-2 text-muted-foreground">{item.locations.join(", ")}</p>
+                  </td>
+                  <td className="border-b border-border px-4 py-3 align-top text-muted-foreground">
+                    {formatSalary(item)}
+                  </td>
+                  <td className="max-w-xs border-b border-border px-4 py-3 align-top">
+                    <SkillList skills={[...item.requiredSkills, ...item.preferredSkills]} />
+                  </td>
+                  <td className="border-b border-border px-4 py-3 align-top">
+                    <ReviewStatusBadge status={item.reviewStatus} />
+                    <ReviewReasons reasons={item.reviewReasons} />
+                  </td>
+                  <td className="border-b border-border px-4 py-3 text-right align-top font-mono text-xs">
+                    {Math.round(item.extractionConfidence * 100)}%
+                    <p className="mt-2 text-muted-foreground">
+                      {lowestProvenanceHint(item)?.fieldName ?? "provenance"}
+                    </p>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </CardContent>
     </Card>
   );
@@ -2944,6 +3090,10 @@ function formatDataSource(source: string) {
   }
 
   return source;
+}
+
+function liveJobItems(jobs: readonly JobItem[]) {
+  return jobs.filter((job) => !job.synthetic);
 }
 
 type PolicyCheckResult = SourcePolicyDecision & {

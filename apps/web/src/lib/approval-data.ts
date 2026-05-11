@@ -63,7 +63,7 @@ export async function getApprovalSnapshot(): Promise<ApprovalSnapshot> {
 
   if (!apiBaseUrl) {
     return localApprovalSnapshot(
-      "NEXT_PUBLIC_API_BASE_URL is not configured; synthetic approval data is shown."
+      "NEXT_PUBLIC_API_BASE_URL is not configured; no approval requests are shown."
     );
   }
 
@@ -78,7 +78,7 @@ export async function getApprovalSnapshot(): Promise<ApprovalSnapshot> {
 
     if (!summaryResponse.ok || !requestsResponse.ok) {
       return localApprovalSnapshot(
-        `Approval API returned HTTP ${summaryResponse.status}/${requestsResponse.status}; synthetic approval data is shown.`,
+        `Approval API returned HTTP ${summaryResponse.status}/${requestsResponse.status}; no approval requests are shown.`,
         requestsUrl
       );
     }
@@ -103,7 +103,7 @@ export async function getApprovalSnapshot(): Promise<ApprovalSnapshot> {
     };
   } catch {
     return localApprovalSnapshot(
-      "Approval API is unreachable; synthetic approval data is shown.",
+      "Approval API is unreachable; no approval requests are shown.",
       requestsUrl
     );
   }
@@ -121,7 +121,7 @@ function mapApiApprovalRequest(item: ApiApprovalRequest): ApprovalRequestItem {
     decisionReason: item.status === "pending" ? null : item.reason,
     requestedAt: item.requested_at,
     resolvedAt: item.resolved_at,
-    synthetic: true,
+    synthetic: false,
     sideEffect:
       item.safety.submit_performed ||
       item.safety.autofill_performed ||
@@ -132,43 +132,12 @@ function mapApiApprovalRequest(item: ApiApprovalRequest): ApprovalRequestItem {
 }
 
 function localApprovalSnapshot(detail: string, checkedUrl?: string): ApprovalSnapshot {
-  const requests: ApprovalRequestItem[] = [
-    {
-      id: "approval-local-policy",
-      jobPostingId: "local:review-policy-ambiguity",
-      userId: "local-user",
-      requestType: "source_policy_review",
-      status: "pending",
-      reason: "Reviewer must confirm source policy before downstream drafting.",
-      reviewerId: null,
-      decisionReason: null,
-      requestedAt: "2026-04-30T09:00:00Z",
-      resolvedAt: null,
-      synthetic: true,
-      sideEffect: "manual_record_only"
-    },
-    {
-      id: "approval-local-claim",
-      jobPostingId: "local:ready-greenhouse-fixture",
-      userId: "local-user",
-      requestType: "claim_evidence_review",
-      status: "needs_changes",
-      reason: "Generated claims need explicit evidence mapping before drafting can continue.",
-      reviewerId: "reviewer-local",
-      decisionReason: "Add evidence references for every claim.",
-      requestedAt: "2026-04-30T09:10:00Z",
-      resolvedAt: "2026-04-30T09:20:00Z",
-      synthetic: true,
-      sideEffect: "manual_record_only"
-    }
-  ];
-
   return {
     source: "local",
     detail,
     checkedUrl,
-    summary: buildApprovalSummary(requests),
-    requests
+    summary: buildApprovalSummary([]),
+    requests: []
   };
 }
 

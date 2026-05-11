@@ -30,13 +30,13 @@ class DashboardService:
                 DashboardAuditFeedItem(
                     event_type="policy.seeded",
                     actor="system",
-                    summary="Synthetic source policy registry initialized.",
+                    summary="Governed source policy registry initialized.",
                     created_at=now,
                 ),
                 DashboardAuditFeedItem(
                     event_type="dashboard.seeded",
                     actor="system",
-                    summary="Demo dashboard counts loaded without live candidate data.",
+                    summary="Dashboard counts loaded without live candidate data.",
                     created_at=now,
                 ),
             ],

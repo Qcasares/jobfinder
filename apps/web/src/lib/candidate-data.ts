@@ -74,7 +74,7 @@ export async function getCandidateWorkspaceSnapshot(): Promise<CandidateWorkspac
 
   if (!apiBaseUrl) {
     return localCandidateWorkspaceSnapshot(
-      "NEXT_PUBLIC_API_BASE_URL is not configured; synthetic candidate data is shown."
+      "NEXT_PUBLIC_API_BASE_URL is not configured; no connected candidate profile is shown."
     );
   }
 
@@ -88,7 +88,7 @@ export async function getCandidateWorkspaceSnapshot(): Promise<CandidateWorkspac
 
     if (!response.ok) {
       return localCandidateWorkspaceSnapshot(
-        `Candidate API returned HTTP ${response.status}; synthetic candidate data is shown.`,
+        `Candidate API returned HTTP ${response.status}; no connected candidate profile is shown.`,
         workspaceUrl
       );
     }
@@ -96,7 +96,7 @@ export async function getCandidateWorkspaceSnapshot(): Promise<CandidateWorkspac
     return mapApiCandidateWorkspace((await response.json()) as ApiCandidateWorkspace, workspaceUrl);
   } catch {
     return localCandidateWorkspaceSnapshot(
-      "Candidate API is unreachable; synthetic candidate data is shown.",
+      "Candidate API is unreachable; no connected candidate profile is shown.",
       workspaceUrl
     );
   }
@@ -108,7 +108,8 @@ function mapApiCandidateWorkspace(
 ): CandidateWorkspaceSnapshot {
   return {
     source: "api",
-    detail: "Candidate workspace is loaded from the FastAPI synthetic local-mode endpoints.",
+    detail:
+      "Candidate workspace is loaded from approved profile evidence and candidate vault metadata.",
     checkedUrl,
     safetyNote: workspace.safety_note,
     profile: {
@@ -149,45 +150,15 @@ function localCandidateWorkspaceSnapshot(
     detail,
     checkedUrl,
     safetyNote:
-      "Synthetic local candidate workspace only. Do not enter a real CV, private contact data, or production candidate evidence in this tranche.",
+      "Candidate profile data must be connected through approved evidence or candidate vault metadata before use.",
     profile: {
-      id: "local-synthetic-profile",
-      userId: "local-synthetic-user",
-      profileName: "Synthetic Candidate Profile",
-      summary: "Synthetic profile for local workflow validation. No real CV data is stored.",
+      id: "profile-connection-pending",
+      userId: "profile-user-pending",
+      profileName: "Candidate profile not connected",
+      summary: null,
       synthetic: true
     },
-    evidence: [
-      {
-        id: "local-evidence-api-design",
-        evidenceType: "project",
-        title: "Synthetic API design evidence",
-        description: "Example evidence item for schema and provenance testing only.",
-        sourceUrl: "https://example.com/synthetic-api-design",
-        verifiedAt: "2026-04-30T09:00:00Z",
-        synthetic: true
-      },
-      {
-        id: "local-evidence-python-sql",
-        evidenceType: "skill",
-        title: "Synthetic Python and SQL evidence",
-        description: "Placeholder skill evidence; not derived from a real CV.",
-        sourceUrl: null,
-        verifiedAt: "2026-04-30T09:05:00Z",
-        synthetic: true
-      }
-    ],
-    searchCriteria: [
-      {
-        id: "local-criteria-backend",
-        name: "Synthetic backend platform search",
-        query: "backend platform roles using Python, APIs, and SQL",
-        location: "Remote - UK",
-        remoteType: "remote",
-        salaryMin: null,
-        salaryMax: null,
-        synthetic: true
-      }
-    ]
+    evidence: [],
+    searchCriteria: []
   };
 }
