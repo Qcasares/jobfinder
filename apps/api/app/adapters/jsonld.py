@@ -3,6 +3,7 @@ from app.adapters.common import (
     JsonMap,
     as_mapping,
     first_text,
+    join_location_parts,
     normalize_employment_type,
     normalize_remote_type,
     object_list,
@@ -74,12 +75,20 @@ def _locations(job: JsonMap) -> tuple[str, ...]:
     if text(job.get("jobLocationType")).casefold() == "telecommute":
         requirements = as_mapping(job.get("applicantLocationRequirements"))
         return split_locations(requirements.get("name") or "Remote")
-    locations = object_list(job.get("jobLocation"))
+    location_payload = job.get("jobLocation")
+    location = as_mapping(location_payload)
+    locations = [location] if location else object_list(location_payload)
     labels: list[str] = []
     for location in locations:
         address = as_mapping(location.get("address"))
         labels.append(
             first_text(
+                location.get("name"),
+                join_location_parts(
+                    address.get("addressLocality"),
+                    address.get("addressRegion"),
+                    address.get("addressCountry"),
+                ),
                 address.get("streetAddress"),
                 address.get("addressLocality"),
                 address.get("addressRegion"),

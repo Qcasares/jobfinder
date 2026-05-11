@@ -89,6 +89,7 @@ from app.services.drafting import DraftingProvider, DraftingSafetyError, Draftin
 from app.services.final_review import FinalReviewPacketService
 from app.services.jobs import JobCatalogService
 from app.services.live_discovery import FetchFunction, LiveDiscoveryService
+from app.services.live_review_items import LiveReviewItemStore
 from app.services.manual_handoff import (
     InvalidManualHandoffTransitionError,
     ManualHandoffNotFoundError,
@@ -350,31 +351,61 @@ def create_app(
         except CandidateSafetyError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    @app.get("/review/queue", response_model=list[ReviewQueueItem])
-    def review_queue(status: ReviewQueueStatusFilter = "all") -> list[ReviewQueueItem]:
+    def _live_review_items(
+        session: Session,
+        status: ReviewQueueStatusFilter = "all",
+    ) -> list[ReviewQueueItem]:
+        persisted_items = LiveReviewItemStore(session).list_items(status=status)
+        persisted_urls = {item.source_url for item in persisted_items}
+        memory_items = [
+            item
+            for item in live_discovery_service.review_items()
+            if item.source_url not in persisted_urls
+            and (status == "all" or item.review_status == status)
+        ]
+        return [*persisted_items, *memory_items]
+
+    def _review_queue_items(
+        session: Session,
+        status: ReviewQueueStatusFilter = "all",
+    ) -> list[ReviewQueueItem]:
         return ReviewQueueService(
             raw_postings=(),
             fixture_specs=None,
-        ).list_items(status=status) + [
-            item
-            for item in live_discovery_service.review_items()
-            if status == "all" or item.review_status == status
-        ]
+        ).list_items(status=status) + _live_review_items(session, status=status)
+
+    @app.get("/review/queue", response_model=list[ReviewQueueItem])
+    def review_queue(
+        session: Annotated[Session, Depends(get_db_session)],
+        status: ReviewQueueStatusFilter = "all",
+    ) -> list[ReviewQueueItem]:
+        return _review_queue_items(session, status=status)
 
     @app.get("/review/summary", response_model=ReviewQueueSummary)
-    def review_summary() -> ReviewQueueSummary:
-        items = review_queue(status="all")
+    def review_summary(
+        session: Annotated[Session, Depends(get_db_session)],
+    ) -> ReviewQueueSummary:
+        items = _review_queue_items(session, status="all")
         ready = sum(1 for item in items if item.review_status == "ready")
         needs_review = sum(1 for item in items if item.review_status == "needs_review")
         return ReviewQueueSummary(total=len(items), ready=ready, needs_review=needs_review)
 
     @app.get("/jobs", response_model=list[JobListItem])
-    def list_jobs(status: JobStatusFilter = "all") -> list[JobListItem]:
-        return JobCatalogService().list_jobs(status=status)
+    def list_jobs(
+        session: Annotated[Session, Depends(get_db_session)],
+        status: JobStatusFilter = "all",
+    ) -> list[JobListItem]:
+        return JobCatalogService(
+            live_review_items=_live_review_items(session, status=status),
+        ).list_jobs(status=status)
 
     @app.get("/jobs/summary", response_model=JobSummary)
-    def jobs_summary() -> JobSummary:
-        return JobCatalogService().get_summary()
+    def jobs_summary(
+        session: Annotated[Session, Depends(get_db_session)],
+    ) -> JobSummary:
+        return JobCatalogService(
+            live_review_items=_live_review_items(session),
+        ).get_summary()
 
     @app.post("/autofill/packets", response_model=AutofillPacketRead)
     def create_autofill_packet(

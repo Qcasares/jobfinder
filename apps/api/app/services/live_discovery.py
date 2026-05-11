@@ -26,6 +26,7 @@ from app.schemas.policy import PolicyAction, PolicyDecision
 from app.schemas.review import ReviewQueueItem
 from app.services.audit import AuditEventService
 from app.services.domain import normalize_domain
+from app.services.live_review_items import LiveReviewItemStore
 from app.services.manual_handoff import ManualHandoffService
 from app.services.review_queue import ReviewQueueService
 from app.services.source_registry import SourceRegistryService
@@ -146,18 +147,6 @@ class LiveDiscoveryService:
                 fetched_status_code=fetched.status_code,
                 content_type=fetched.content_type,
             )
-        if fetched.status_code >= 400:
-            return self._fail(
-                run_id,
-                request,
-                source_domain,
-                reason="fetch_http_error",
-                detail=f"Live source returned HTTP {fetched.status_code}.",
-                final_url=fetched.final_url,
-                fetched_status_code=fetched.status_code,
-                content_type=fetched.content_type,
-            )
-
         self._audit(
             "live_discovery.fetched",
             run_id,
@@ -169,20 +158,36 @@ class LiveDiscoveryService:
                 "bytes": len(fetched.body),
             },
         )
-        stop_condition = _detect_stop_condition(fetched.body)
-        if stop_condition is not None:
-            return self._manual_handoff(
-                active_session,
+
+        items = (
+            self._extract_review_items(fetched, source_url=url)
+            if fetched.status_code < 400
+            else []
+        )
+        if not items:
+            stop_condition = _detect_stop_condition(fetched.body)
+            if stop_condition is not None:
+                return self._manual_handoff(
+                    active_session,
+                    run_id,
+                    request,
+                    source_domain,
+                    stop_condition,
+                    final_url=fetched.final_url,
+                    fetched_status_code=fetched.status_code,
+                    content_type=fetched.content_type,
+                )
+        if fetched.status_code >= 400:
+            return self._fail(
                 run_id,
                 request,
                 source_domain,
-                stop_condition,
+                reason="fetch_http_error",
+                detail=f"Live source returned HTTP {fetched.status_code}.",
                 final_url=fetched.final_url,
                 fetched_status_code=fetched.status_code,
                 content_type=fetched.content_type,
             )
-
-        items = self._extract_review_items(fetched, source_url=url)
         if not items:
             return self._fail(
                 run_id,
@@ -195,7 +200,8 @@ class LiveDiscoveryService:
                 content_type=fetched.content_type,
             )
 
-        self._review_items.extend(items)
+        items = LiveReviewItemStore(active_session).upsert_items(items)
+        self._remember_review_items(items)
         run = LiveDiscoveryRun(
             id=run_id,
             url=url,
@@ -320,6 +326,28 @@ class LiveDiscoveryService:
                 fetched_status_code=fetched.status_code,
                 content_type=fetched.content_type,
             )
+        discovered_urls = (
+            _discover_job_links(
+                fetched.body,
+                base_url=fetched.final_url,
+                source_domain=source_domain,
+                max_results=request.max_results,
+            )
+            if fetched.status_code < 400
+            else []
+        )
+        stop_condition = _detect_stop_condition(fetched.body)
+        if stop_condition is not None and not discovered_urls:
+            return self._manual_handoff_search(
+                active_session,
+                run_id,
+                request,
+                source_domain,
+                stop_condition,
+                final_url=fetched.final_url,
+                fetched_status_code=fetched.status_code,
+                content_type=fetched.content_type,
+            )
         if fetched.status_code >= 400:
             return self._fail_search(
                 run_id,
@@ -331,26 +359,6 @@ class LiveDiscoveryService:
                 fetched_status_code=fetched.status_code,
                 content_type=fetched.content_type,
             )
-
-        stop_condition = _detect_stop_condition(fetched.body)
-        if stop_condition is not None:
-            return self._manual_handoff_search(
-                active_session,
-                run_id,
-                request,
-                source_domain,
-                stop_condition,
-                final_url=fetched.final_url,
-                fetched_status_code=fetched.status_code,
-                content_type=fetched.content_type,
-            )
-
-        discovered_urls = _discover_job_links(
-            fetched.body,
-            base_url=fetched.final_url,
-            source_domain=source_domain,
-            max_results=request.max_results,
-        )
         run = LiveDiscoveryRun(
             id=run_id,
             url=url,
@@ -380,6 +388,12 @@ class LiveDiscoveryService:
 
     def review_items(self) -> list[ReviewQueueItem]:
         return list(self._review_items)
+
+    def _remember_review_items(self, items: list[ReviewQueueItem]) -> None:
+        by_source_url = {item.source_url: item for item in self._review_items}
+        for item in items:
+            by_source_url[item.source_url] = item
+        self._review_items = list(by_source_url.values())
 
     def _extract_review_items(
         self,
@@ -427,6 +441,16 @@ class LiveDiscoveryService:
                     content_type=response.headers.get("content-type", ""),
                     body=body,
                 )
+        except urllib.error.HTTPError as exc:
+            body = exc.read(self._settings.live_discovery_max_bytes + 1)
+            if len(body) > self._settings.live_discovery_max_bytes:
+                raise ValueError("response exceeded live discovery byte limit") from exc
+            return FetchResult(
+                final_url=exc.geturl(),
+                status_code=exc.code,
+                content_type=exc.headers.get("content-type", ""),
+                body=body,
+            )
         except urllib.error.URLError as exc:
             raise ValueError(str(exc.reason)) from exc
 
@@ -749,7 +773,17 @@ STOP_CONDITION_MARKERS: tuple[tuple[ManualHandoffTrigger, str, tuple[str, ...]],
     (
         "login_required",
         "Manual handoff required: login-only page detected.",
-        ("login required", "sign in", "log in", "create an account"),
+        (
+            "login required",
+            "log in required",
+            "sign in required",
+            "please sign in",
+            "please log in",
+            "sign in to continue",
+            "log in to continue",
+            "sign in to apply",
+            "log in to apply",
+        ),
     ),
     (
         "access_control",

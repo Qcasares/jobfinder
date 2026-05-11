@@ -16,6 +16,7 @@ from app.schemas.policy import PolicyAction
 from app.schemas.source_registry import SourcePolicyEvidenceCreate
 from app.services.audit import AuditEventService
 from app.services.live_discovery import FetchResult, LiveDiscoveryService
+from app.services.live_review_items import LiveReviewItemStore
 from app.services.source_registry import SourceRegistryService
 
 JSON_LD_HTML = b"""
@@ -43,6 +44,11 @@ JSON_LD_HTML = b"""
   </head>
 </html>
 """
+
+PUBLIC_JOB_WITH_SIGN_IN_NAV = JSON_LD_HTML.replace(
+    b"</html>",
+    b"<body><nav><a href='/login'>Sign in</a></nav></body></html>",
+)
 
 SEARCH_RESULTS_HTML = b"""
 <html>
@@ -199,10 +205,36 @@ def test_live_discovery_extracts_json_ld_and_appends_audit_events() -> None:
     assert items[0].title == "Live Platform Engineer"
     assert items[0].synthetic is False
     assert items[0].data_origin == "live_extraction"
+    persisted_items = LiveReviewItemStore(session).list_items()
+    assert len(persisted_items) == 1
+    assert persisted_items[0].title == "Live Platform Engineer"
+    assert persisted_items[0].synthetic is False
     event_types = [event.event_type for event in audit.list_events()]
     assert "live_discovery.requested" in event_types
     assert "live_discovery.fetched" in event_types
     assert "live_discovery.extracted" in event_types
+
+
+def test_live_discovery_extracts_public_job_pages_with_sign_in_navigation() -> None:
+    session = _session()
+    _allow_source(session, "careers.example.test")
+    service = LiveDiscoveryService(
+        session,
+        settings=Settings(live_discovery_enabled=True),
+        fetcher=_fetcher(PUBLIC_JOB_WITH_SIGN_IN_NAV),
+    )
+
+    run = service.run(
+        LiveDiscoveryRequest(
+            url="https://careers.example.test/jobs/platform",
+            source_domain="careers.example.test",
+        )
+    )
+
+    assert run.status == LiveDiscoveryStatus.EXTRACTED
+    assert run.extracted_count == 1
+    assert run.manual_handoff_id is None
+    assert service.review_items()[0].title == "Live Platform Engineer"
 
 
 def test_live_discovery_routes_captcha_to_manual_handoff_record() -> None:
@@ -278,10 +310,15 @@ def test_live_discovery_endpoints_return_run_and_review_item() -> None:
             },
         )
         review_response = client.get("/review/queue")
+        jobs_response = client.get("/jobs")
 
     assert response.status_code == 200
     assert response.json()["status"] == "extracted"
     assert any(item["data_origin"] == "live_extraction" for item in review_response.json())
+    assert any(
+        job["title"] == "Live Platform Engineer" and job["synthetic"] is False
+        for job in jobs_response.json()
+    )
 
 
 def test_live_search_discovery_finds_same_domain_job_links_and_audits_run() -> None:

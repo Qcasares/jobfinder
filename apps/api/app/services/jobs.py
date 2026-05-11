@@ -1,14 +1,31 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from app.schemas.jobs import JobListItem, JobStatusFilter, JobSummary
+from app.schemas.review import ReviewQueueItem
 from app.services.review_queue import ReviewQueueService
 
 
 class JobCatalogService:
-    def __init__(self, *, review_queue: ReviewQueueService | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        review_queue: ReviewQueueService | None = None,
+        live_review_items: Sequence[ReviewQueueItem] | None = None,
+    ) -> None:
         self._review_queue = review_queue or ReviewQueueService()
+        self._live_review_items = tuple(live_review_items or ())
 
     def list_jobs(self, status: JobStatusFilter = "all") -> list[JobListItem]:
+        items = [
+            *self._review_queue.list_items(status=status),
+            *(
+                item
+                for item in self._live_review_items
+                if status == "all" or item.review_status == status
+            ),
+        ]
         return [
             JobListItem(
                 id=item.id,
@@ -34,7 +51,7 @@ class JobCatalogService:
                 fixture_name=item.fixture_name,
                 synthetic=item.synthetic,
             )
-            for item in self._review_queue.list_items(status=status)
+            for item in items
         ]
 
     def get_summary(self) -> JobSummary:

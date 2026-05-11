@@ -12,6 +12,7 @@ from app.schemas.policy import PolicyAction
 from app.schemas.source_registry import SourcePolicyEvidenceCreate
 from app.services.discovery_queue import DiscoveryQueueService
 from app.services.live_discovery import FetchResult, LiveDiscoveryService
+from app.services.live_review_items import LiveReviewItemStore
 from app.services.source_registry import SourceRegistryService
 
 JSON_LD_HTML = b"""
@@ -65,6 +66,9 @@ def test_discovery_queue_enqueues_processes_and_dedupes_runs() -> None:
     assert processed.status == "completed"
     assert processed.attempts == 1
     assert processed.review_item_ids
+    assert [item.title for item in LiveReviewItemStore(session).list_items()] == [
+        "Queued Engineer"
+    ]
 
 
 def test_discovery_queue_rate_limits_same_source_runs() -> None:

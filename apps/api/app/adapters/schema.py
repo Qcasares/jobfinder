@@ -11,7 +11,7 @@ class RawJobPosting(BaseModel):
     external_id: str = Field(min_length=1)
     title: str = Field(min_length=1)
     company: str = Field(min_length=1)
-    locations: tuple[str, ...] = Field(min_length=1)
+    locations: tuple[str, ...] = ()
     remote_type: str | None = None
     employment_type: str | None = None
     salary_min: int | None = None

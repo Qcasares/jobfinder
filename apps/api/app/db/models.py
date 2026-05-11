@@ -181,6 +181,39 @@ class JobPosting(TimestampMixin, Base):
     __table_args__ = (Index("ix_job_postings_company_title", "company", "title"),)
 
 
+class LiveReviewItem(TimestampMixin, Base):
+    __tablename__ = "live_review_items"
+
+    id: Mapped[str] = mapped_column(String(240), primary_key=True)
+    source: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
+    external_id: Mapped[str] = mapped_column(String(240), nullable=False)
+    source_url: Mapped[str] = mapped_column(Text(), nullable=False, unique=True)
+    application_url: Mapped[str | None] = mapped_column(Text())
+    title: Mapped[str] = mapped_column(String(240), nullable=False)
+    company: Mapped[str] = mapped_column(String(240), nullable=False)
+    locations: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    remote_type: Mapped[str] = mapped_column(String(40), default="unknown", nullable=False)
+    salary_min: Mapped[int | None]
+    salary_max: Mapped[int | None]
+    salary_currency: Mapped[str | None] = mapped_column(String(3))
+    employment_type: Mapped[str | None] = mapped_column(String(80))
+    posted_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    valid_through: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    required_skills: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    preferred_skills: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    review_status: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
+    review_reasons: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    extraction_confidence: Mapped[Decimal] = mapped_column(Numeric(4, 3), nullable=False)
+    provenance_hints: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    data_origin: Mapped[str] = mapped_column(
+        String(80), default="live_extraction", nullable=False
+    )
+
+    __table_args__ = (
+        Index("ix_live_review_items_source_created", "source", "created_at"),
+    )
+
+
 class JobPostingSource(Base):
     __tablename__ = "job_posting_sources"
 

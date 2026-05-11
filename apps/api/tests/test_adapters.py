@@ -106,6 +106,47 @@ def test_ashby_adapter_maps_remote_job() -> None:
     assert jobs[0].locations == ("Remote - Canada",)
 
 
+def test_jsonld_adapter_parses_single_job_location_object() -> None:
+    jobs = JsonLdAdapter().parse(
+        {
+            "@context": "https://schema.org/",
+            "@type": "JobPosting",
+            "title": "Production Software Engineer",
+            "url": "https://jobs.example.test/software",
+            "identifier": {"value": "job-1"},
+            "hiringOrganization": {"name": "Example Jobs"},
+            "jobLocation": {
+                "@type": "Place",
+                "address": {
+                    "@type": "PostalAddress",
+                    "addressLocality": "London",
+                    "addressRegion": "South East England",
+                    "addressCountry": "GB",
+                },
+            },
+        },
+        source_url="https://jobs.example.test/software",
+    )
+
+    assert jobs[0].locations == ("London, South East England, GB",)
+
+
+def test_jsonld_adapter_allows_missing_locations_for_review_routing() -> None:
+    jobs = JsonLdAdapter().parse(
+        {
+            "@context": "https://schema.org/",
+            "@type": "JobPosting",
+            "title": "Production Software Engineer",
+            "url": "https://jobs.example.test/software",
+            "identifier": {"value": "job-1"},
+            "hiringOrganization": {"name": "Example Jobs"},
+        },
+        source_url="https://jobs.example.test/software",
+    )
+
+    assert jobs[0].locations == ()
+
+
 def test_smartrecruiters_adapter_keeps_expired_valid_through_date() -> None:
     jobs = SmartRecruitersAdapter().parse(
         load_adapter_fixture("smartrecruiters_expired.json"),

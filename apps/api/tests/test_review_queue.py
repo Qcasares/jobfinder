@@ -3,8 +3,11 @@ from __future__ import annotations
 from datetime import date
 
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.pool import StaticPool
 
 from app.adapters import RawJobPosting
+from app.db.base import Base
 from app.main import create_app
 from app.schemas.review import ReviewQueueItem, ReviewQueueSummary
 from app.services.review_queue import ReviewQueueService
@@ -97,7 +100,7 @@ def test_review_queue_can_filter_ready_items_and_count_mixed_statuses() -> None:
 
 
 def test_review_queue_endpoint_returns_typed_schema() -> None:
-    client = TestClient(create_app())
+    client = _test_client()
 
     response = client.get("/review/queue")
 
@@ -110,7 +113,7 @@ def test_review_queue_endpoint_returns_typed_schema() -> None:
 
 
 def test_review_summary_endpoint_returns_typed_schema() -> None:
-    client = TestClient(create_app())
+    client = _test_client()
 
     response = client.get("/review/summary")
 
@@ -119,3 +122,13 @@ def test_review_summary_endpoint_returns_typed_schema() -> None:
     assert summary.total == 7
     assert summary.ready == 7
     assert summary.needs_review == 0
+
+
+def _test_client() -> TestClient:
+    engine = create_engine(
+        "sqlite+pysqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    return TestClient(create_app(test_engine=engine))

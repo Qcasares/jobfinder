@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.pool import StaticPool
 
+from app.db.base import Base
 from app.main import create_app
 from app.schemas.jobs import JobListItem, JobSummary
 from app.services.jobs import JobCatalogService
@@ -43,7 +46,7 @@ def test_job_catalog_status_filter_uses_review_status() -> None:
 
 
 def test_jobs_endpoints_return_typed_schemas() -> None:
-    client = TestClient(create_app())
+    client = _test_client()
 
     jobs_response = client.get("/jobs")
     summary_response = client.get("/jobs/summary")
@@ -58,3 +61,13 @@ def test_jobs_endpoints_return_typed_schemas() -> None:
     summary = JobSummary.model_validate(summary_response.json())
     assert summary.total == 7
     assert summary.ready == 7
+
+
+def _test_client() -> TestClient:
+    engine = create_engine(
+        "sqlite+pysqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    return TestClient(create_app(test_engine=engine))
