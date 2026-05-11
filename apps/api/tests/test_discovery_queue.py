@@ -24,6 +24,16 @@ JSON_LD_HTML = b"""
 </script></head></html>
 """
 
+SEARCH_RESULTS_HTML = b"""
+<html><body>
+  <a href="/jobs/queued-one/101">Queued One</a>
+  <a href="https://careers.example.test/jobs/queued-two/202#details">Queued Two</a>
+  <a href="https://external.example.test/jobs/external">External</a>
+  <a href="/about">About</a>
+  <a href="/jobs/queued-one/101">Duplicate</a>
+</body></html>
+"""
+
 
 def test_discovery_queue_enqueues_processes_and_dedupes_runs() -> None:
     session = _session()
@@ -101,6 +111,50 @@ def test_discovery_queue_rate_limits_same_source_runs() -> None:
     assert processed.status == "completed"
     assert second.status == "rate_limited"
     assert second.rate_limit_after is not None
+
+
+def test_discovery_queue_search_enqueues_discovered_job_runs() -> None:
+    session = _session()
+    _allow_source(session, "careers.example.test")
+    live = LiveDiscoveryService(
+        session,
+        settings=Settings(live_discovery_enabled=True, live_search_discovery_enabled=True),
+        fetcher=lambda url: FetchResult(
+            final_url=url,
+            status_code=200,
+            content_type="text/html",
+            body=SEARCH_RESULTS_HTML,
+        ),
+    )
+    service = DiscoveryQueueService(
+        session,
+        settings=Settings(live_discovery_enabled=True, live_search_discovery_enabled=True),
+        live_discovery_service=live,
+    )
+
+    queued = service.enqueue(
+        DiscoveryQueueRunCreate(
+            url="https://careers.example.test/jobs/search?q=engineer",
+            source_domain="careers.example.test",
+            mode="search",
+            requested_by="operator-test",
+            max_results=5,
+        )
+    )
+    processed = service.process_run(queued.id)
+    runs = service.list_runs(limit=10)
+    child_runs = [run for run in runs if run.mode == "job"]
+
+    assert processed.status == "completed"
+    assert processed.discovered_urls == [
+        "https://careers.example.test/jobs/queued-one/101",
+        "https://careers.example.test/jobs/queued-two/202",
+    ]
+    assert sorted(run.url for run in child_runs) == [
+        "https://careers.example.test/jobs/queued-one/101",
+        "https://careers.example.test/jobs/queued-two/202",
+    ]
+    assert all(run.status in {"queued", "rate_limited"} for run in child_runs)
 
 
 def _session() -> Session:

@@ -144,6 +144,8 @@ class DiscoveryQueueService:
         row.manual_handoff_id = live_run.manual_handoff_id
         row.discovered_urls = list(live_run.discovered_urls)
         row.review_item_ids = list(live_run.review_item_ids)
+        if row.mode == "search" and live_run.discovered_urls:
+            self._enqueue_discovered_job_runs(row, list(live_run.discovered_urls))
         if live_run.manual_handoff_id:
             row.status = "manual_handoff_required"
         elif live_run.status.value in {"extracted", "discovered"}:
@@ -166,6 +168,70 @@ class DiscoveryQueueService:
             },
         )
         return _read(row)
+
+    def _enqueue_discovered_job_runs(
+        self,
+        parent: DiscoveryQueueRun,
+        discovered_urls: list[str],
+    ) -> None:
+        now = datetime.now(UTC)
+        for url in discovered_urls:
+            existing = self._session.scalar(
+                select(DiscoveryQueueRun)
+                .where(
+                    DiscoveryQueueRun.url == url,
+                    DiscoveryQueueRun.source_domain == parent.source_domain,
+                    DiscoveryQueueRun.mode == "job",
+                    DiscoveryQueueRun.status.in_(
+                        [
+                            "queued",
+                            "rate_limited",
+                            "running",
+                            "completed",
+                            "manual_handoff_required",
+                        ]
+                    ),
+                )
+                .limit(1)
+            )
+            if existing is not None:
+                continue
+            rate_limit_after = self._rate_limit_after(parent.source_domain, now)
+            row = DiscoveryQueueRun(
+                id=str(uuid4()),
+                mode="job",
+                url=url,
+                source_domain=parent.source_domain,
+                requested_by=parent.requested_by,
+                status="rate_limited" if rate_limit_after is not None else "queued",
+                max_results=1,
+                attempts=0,
+                max_attempts=parent.max_attempts,
+                rate_limit_after=rate_limit_after,
+                live_run_id=None,
+                manual_handoff_id=None,
+                failure_reason=None,
+                failure_detail=None,
+                discovered_urls=[],
+                review_item_ids=[],
+                created_at=now,
+                updated_at=now,
+            )
+            self._session.add(row)
+            self._audit(
+                "discovery_queue.enqueued",
+                row.id,
+                {
+                    "queue_run_id": row.id,
+                    "parent_queue_run_id": parent.id,
+                    "mode": row.mode,
+                    "source_domain": row.source_domain,
+                    "url": row.url,
+                    "status": row.status,
+                    "rate_limited": row.rate_limit_after is not None,
+                },
+            )
+        self._session.flush()
 
     def _rate_limit_after(self, source_domain: str, now: datetime) -> datetime | None:
         latest = self._session.scalar(

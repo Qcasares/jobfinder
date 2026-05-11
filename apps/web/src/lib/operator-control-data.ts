@@ -35,6 +35,15 @@ export type DiscoveryQueueRun = {
   createdAt: string;
 };
 
+export type DiscoveryQueueRunRequest = {
+  url: string;
+  sourceDomain?: string;
+  mode: "job" | "search";
+  requestedBy: string;
+  maxResults: number;
+  maxAttempts?: number;
+};
+
 export type ObservabilitySummary = {
   totalAuditEvents: number;
   errorEvents: number;
@@ -134,8 +143,6 @@ type ApiSourceRecord = {
   latest_policy: { status: string } | null;
 };
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? "";
-
 export async function createOperatorToken(
   loginSecret: string,
   actorId: string
@@ -176,6 +183,25 @@ export async function resolveManualHandoff(
 export async function getDiscoveryQueueRuns(): Promise<DiscoveryQueueRun[]> {
   const payload = await request<ApiDiscoveryQueueRun[]>("/discovery-queue/runs?limit=20");
   return payload.map(mapDiscoveryRun);
+}
+
+export async function enqueueDiscoveryQueueRun(
+  token: string,
+  requestBody: DiscoveryQueueRunRequest
+): Promise<DiscoveryQueueRun> {
+  const payload = await request<ApiDiscoveryQueueRun>("/discovery-queue/runs", {
+    body: JSON.stringify({
+      url: requestBody.url,
+      source_domain: requestBody.sourceDomain || undefined,
+      mode: requestBody.mode,
+      requested_by: requestBody.requestedBy,
+      max_results: requestBody.maxResults,
+      max_attempts: requestBody.maxAttempts ?? 3
+    }),
+    headers: authHeaders(token),
+    method: "POST"
+  });
+  return mapDiscoveryRun(payload);
 }
 
 export async function processDiscoveryQueueRun(
@@ -241,10 +267,11 @@ async function request<T>(
   path: string,
   init: { body?: string; headers?: Record<string, string>; method?: string } = {}
 ): Promise<T> {
-  if (!API_BASE_URL) {
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? "";
+  if (!apiBaseUrl) {
     throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
   }
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(`${apiBaseUrl}${path}`, {
     method: init.method ?? "GET",
     headers: { accept: "application/json", ...(init.headers ?? {}) },
     ...(init.body === undefined ? {} : { body: init.body })

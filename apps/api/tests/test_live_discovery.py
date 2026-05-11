@@ -53,10 +53,22 @@ PUBLIC_JOB_WITH_SIGN_IN_NAV = JSON_LD_HTML.replace(
 SEARCH_RESULTS_HTML = b"""
 <html>
   <body>
-    <a href="/jobs/platform">Platform Engineer</a>
-    <a href="https://careers.example.test/jobs/data">Data Engineer</a>
+    <a href="/jobs/platform/123">Platform Engineer</a>
+    <a href="https://careers.example.test/jobs/data/456">Data Engineer</a>
     <a href="https://external.example.test/jobs/blocked">External Role</a>
     <a href="/about">About</a>
+  </body>
+</html>
+"""
+
+SEARCH_RESULTS_WITH_NAV_HTML = b"""
+<html>
+  <body>
+    <a href="/account/jobs/shortlisted-jobs">Shortlisted jobs</a>
+    <a href="/jobs/software-engineer-jobs-in-birmingham">Software jobs in Birmingham</a>
+    <a href="/jobs/jobs-in-london">Jobs in London</a>
+    <a href="/jobs/vitality-31167/p31167">Company profile</a>
+    <a href="/jobs/platform-engineer/12345">Platform Engineer</a>
   </body>
 </html>
 """
@@ -342,12 +354,32 @@ def test_live_search_discovery_finds_same_domain_job_links_and_audits_run() -> N
     assert run.status == LiveDiscoveryStatus.DISCOVERED
     assert run.discovered_count == 2
     assert run.discovered_urls == (
-        "https://careers.example.test/jobs/platform",
-        "https://careers.example.test/jobs/data",
+        "https://careers.example.test/jobs/platform/123",
+        "https://careers.example.test/jobs/data/456",
     )
     event_types = [event.event_type for event in audit.list_events()]
     assert "live_search_discovery.requested" in event_types
     assert "live_search_discovery.discovered" in event_types
+
+
+def test_live_search_discovery_ignores_account_and_category_navigation_links() -> None:
+    session = _session()
+    _allow_source(session, "careers.example.test")
+    service = LiveDiscoveryService(
+        session,
+        settings=Settings(live_discovery_enabled=True, live_search_discovery_enabled=True),
+        fetcher=_fetcher(SEARCH_RESULTS_WITH_NAV_HTML),
+    )
+
+    run = service.discover_search_results(
+        url="https://careers.example.test/search?q=engineer",
+        source_domain="careers.example.test",
+        requested_by="operator-test",
+        max_results=5,
+    )
+
+    assert run.status == LiveDiscoveryStatus.DISCOVERED
+    assert run.discovered_urls == ("https://careers.example.test/jobs/platform-engineer/12345",)
 
 
 def test_live_search_discovery_routes_login_page_to_manual_handoff_record() -> None:
@@ -446,8 +478,8 @@ def test_live_search_discovery_endpoint_returns_discovered_urls() -> None:
     assert response.status_code == 200
     assert response.json()["status"] == "discovered"
     assert response.json()["discovered_urls"] == [
-        "https://careers.example.test/jobs/platform",
-        "https://careers.example.test/jobs/data",
+        "https://careers.example.test/jobs/platform/123",
+        "https://careers.example.test/jobs/data/456",
     ]
 
 

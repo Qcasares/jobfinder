@@ -843,7 +843,7 @@ def _discover_job_links(
         if normalize_domain(parsed.hostname or "") != source_domain:
             continue
         path = parsed.path.lower()
-        if not any(marker in path for marker in ("/job", "/jobs", "/careers", "/positions")):
+        if not _looks_like_job_detail_path(path):
             continue
         normalized = parsed._replace(fragment="").geturl()
         if normalized not in discovered:
@@ -851,6 +851,26 @@ def _discover_job_links(
         if len(discovered) >= max_results:
             break
     return discovered
+
+
+def _looks_like_job_detail_path(path: str) -> bool:
+    if path.startswith(("/account/", "/login", "/signin", "/sign-in")):
+        return False
+    if any(
+        marker in path
+        for marker in (
+            "shortlisted-jobs",
+            "saved-jobs",
+            "applied-jobs",
+            "job-alert",
+            "jobs-by-",
+        )
+    ):
+        return False
+    if "/jobs/" in path:
+        path_segments = [segment for segment in path.split("/") if segment]
+        return any(segment.isdigit() for segment in path_segments)
+    return any(marker in path for marker in ("/job", "/careers", "/positions"))
 
 
 class _LinkParser(HTMLParser):

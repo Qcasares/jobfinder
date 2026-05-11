@@ -49,6 +49,7 @@ import {
 import {
   attachSourcePolicy,
   createOperatorToken,
+  enqueueDiscoveryQueueRun,
   getDiscoveryQueueRuns,
   getManualHandoffs,
   getObservabilitySummary,
@@ -2002,6 +2003,10 @@ function OperatorConsolePanel({ runtime }: { runtime: RuntimeSettings }) {
   const [handoffs, setHandoffs] = useState<ManualHandoff[]>([]);
   const [queueRuns, setQueueRuns] = useState<DiscoveryQueueRun[]>([]);
   const [observability, setObservability] = useState<ObservabilitySummary | null>(null);
+  const [queueMode, setQueueMode] = useState<"job" | "search">("job");
+  const [queueUrl, setQueueUrl] = useState("");
+  const [queueSourceDomain, setQueueSourceDomain] = useState("");
+  const [queueMaxResults, setQueueMaxResults] = useState(10);
   const [statusText, setStatusText] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -2070,6 +2075,31 @@ function OperatorConsolePanel({ runtime }: { runtime: RuntimeSettings }) {
     }
   }
 
+  async function handleEnqueue(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!token) {
+      setStatusText("Sign in with an operator session before enqueueing discovery.");
+      return;
+    }
+    setLoading(true);
+    setStatusText(null);
+    try {
+      const queued = await enqueueDiscoveryQueueRun(token.accessToken, {
+        maxResults: queueMode === "search" ? queueMaxResults : 1,
+        mode: queueMode,
+        requestedBy: token.actorId,
+        sourceDomain: queueSourceDomain.trim() || undefined,
+        url: queueUrl.trim()
+      });
+      setQueueUrl("");
+      setStatusText(`Queued ${queued.mode} discovery for ${queued.sourceDomain}.`);
+      await refreshConsole();
+    } catch (caught) {
+      setStatusText(caught instanceof Error ? caught.message : "Discovery enqueue failed.");
+      setLoading(false);
+    }
+  }
+
   return (
     <Card>
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -2111,6 +2141,75 @@ function OperatorConsolePanel({ runtime }: { runtime: RuntimeSettings }) {
           >
             <LockKeyhole className="size-4" aria-hidden="true" />
             Sign in
+          </button>
+        </form>
+        <form
+          className="grid gap-3 rounded-md border border-border bg-muted/30 p-3 lg:grid-cols-[auto_1.4fr_0.8fr_0.5fr_auto]"
+          onSubmit={handleEnqueue}
+        >
+          <div className="grid gap-1 text-sm font-medium">
+            Mode
+            <div className="flex h-10 overflow-hidden rounded-md border border-border bg-white">
+              {(["job", "search"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setQueueMode(mode)}
+                  className={cn(
+                    "inline-flex items-center gap-2 px-3 text-sm font-semibold",
+                    queueMode === mode
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground"
+                  )}
+                >
+                  {mode === "job" ? (
+                    <BriefcaseBusiness className="size-4" aria-hidden="true" />
+                  ) : (
+                    <Search className="size-4" aria-hidden="true" />
+                  )}
+                  {mode}
+                </button>
+              ))}
+            </div>
+          </div>
+          <label className="grid gap-1 text-sm font-medium">
+            URL
+            <input
+              type="url"
+              value={queueUrl}
+              onChange={(event) => setQueueUrl(event.target.value)}
+              placeholder="https://www.reed.co.uk/jobs/..."
+              className="h-10 rounded-md border border-border bg-white px-3 text-sm font-normal outline-none focus:border-primary"
+            />
+          </label>
+          <label className="grid gap-1 text-sm font-medium">
+            Source domain
+            <input
+              value={queueSourceDomain}
+              onChange={(event) => setQueueSourceDomain(event.target.value)}
+              placeholder="reed.co.uk"
+              className="h-10 rounded-md border border-border bg-white px-3 text-sm font-normal outline-none focus:border-primary"
+            />
+          </label>
+          <label className="grid gap-1 text-sm font-medium">
+            Max
+            <input
+              type="number"
+              min={1}
+              max={100}
+              value={queueMaxResults}
+              onChange={(event) => setQueueMaxResults(Number(event.target.value))}
+              disabled={queueMode === "job"}
+              className="h-10 rounded-md border border-border bg-white px-3 text-sm font-normal outline-none focus:border-primary disabled:bg-muted"
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={loading || !token || !queueUrl.trim()}
+            className="inline-flex h-10 items-center justify-center gap-2 self-end rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+          >
+            <DatabaseZap className="size-4" aria-hidden="true" />
+            Queue
           </button>
         </form>
         <div className="grid gap-2 sm:grid-cols-5">
