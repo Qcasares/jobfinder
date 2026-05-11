@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.config import Settings
 from app.db.base import Base
+from app.db.models import DiscoveryQueueRun
 from app.schemas.discovery_queue import DiscoveryQueueRunCreate
 from app.schemas.policy import PolicyAction
 from app.schemas.source_registry import SourcePolicyEvidenceCreate
@@ -190,6 +191,42 @@ def test_discovery_queue_processes_ready_batch_and_skips_future_rate_limits() ->
     assert refreshed[first.id].status == "completed"
     assert refreshed[second.id].status == "rate_limited"
     assert refreshed[third.id].status == "completed"
+
+
+def test_discovery_queue_batch_processes_only_one_ready_run_per_source() -> None:
+    session = _session()
+    _allow_source(session, "careers.example.test")
+    live = LiveDiscoveryService(
+        session,
+        settings=Settings(live_discovery_enabled=True),
+        fetcher=lambda url: FetchResult(
+            final_url=url,
+            status_code=200,
+            content_type="text/html",
+            body=JSON_LD_HTML,
+        ),
+    )
+    service = DiscoveryQueueService(
+        session,
+        settings=Settings(live_discovery_enabled=True),
+        live_discovery_service=live,
+    )
+    first = service.enqueue(DiscoveryQueueRunCreate(url="https://careers.example.test/jobs/one"))
+    second = service.enqueue(DiscoveryQueueRunCreate(url="https://careers.example.test/jobs/two"))
+    stale_ready_at = datetime.now(UTC) - timedelta(minutes=5)
+    for row in session.query(DiscoveryQueueRun).all():
+        row.status = "rate_limited"
+        row.rate_limit_after = stale_ready_at
+        row.updated_at = stale_ready_at
+    session.flush()
+
+    batch = service.process_ready_runs(limit=5)
+
+    refreshed = {run.id: run for run in service.list_runs(limit=10)}
+    assert batch.processed_run_ids == [first.id]
+    assert batch.processed_count == 1
+    assert refreshed[first.id].status == "completed"
+    assert refreshed[second.id].status == "rate_limited"
 
 
 def _session() -> Session:

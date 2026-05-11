@@ -1,18 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f6f7f9;
-  --foreground: #15181e;
-  --card: #ffffff;
-  --card-foreground: #15181e;
-  --muted: #eef1f4;
-  --muted-foreground: #667085;
-  --border: #d9dee7;
-  --primary: #155eef;
-  --primary-foreground: #ffffff;
-  --accent: #0e9384;
-  --warning: #dc6803;
-  --danger: #d92d20;
+  --background: #0a0f1d;
+  --foreground: #f7f8fb;
+  --card: #161d2f;
+  --card-foreground: #f7f8fb;
+  --muted: #101827;
+  --muted-foreground: #9ba8bd;
+  --border: rgba(201, 164, 76, 0.18);
+  --primary: #c9a44c;
+  --primary-foreground: #0a0f1d;
+  --accent: #d6b76a;
+  --warning: #c9a44c;
+  --danger: #ef6b6b;
+  --font-serif-numeral: "Iowan Old Style", "New York", "Cormorant Garamond", Georgia, serif;
 }
 
 @theme inline {
@@ -28,6 +29,12 @@
   --color-accent: var(--accent);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
+  --color-gold-100: #f8edc8;
+  --color-gold-200: #e8d088;
+  --color-gold-300: #d6b76a;
+  --color-gold-400: #c9a44c;
+  --color-gold-500: #b88a34;
+  --color-gold-600: #8a6425;
   --font-sans: "Inter", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "SFMono-Regular", "Cascadia Code", "Roboto Mono", ui-monospace, monospace;
 }
@@ -42,7 +49,10 @@ html {
 
 body {
   margin: 0;
-  background: var(--background);
+  background:
+    radial-gradient(circle at 18% -12%, rgba(201, 164, 76, 0.2), transparent 34rem),
+    radial-gradient(circle at 90% 8%, rgba(70, 122, 180, 0.16), transparent 28rem),
+    var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
 }
@@ -50,4 +60,21 @@ body {
 a {
   color: inherit;
   text-decoration: none;
+}
+
+@keyframes gold-sheen {
+  0% {
+    opacity: 0.15;
+    transform: translateX(-110%);
+  }
+
+  45%,
+  55% {
+    opacity: 0.55;
+  }
+
+  100% {
+    opacity: 0.15;
+    transform: translateX(110%);
+  }
 }

@@ -1,12 +1,17 @@
 "use client";
 
-import { type FormEvent, useState } from "react";
+import { type FormEvent, type ReactNode, useId, useState } from "react";
+import { motion } from "framer-motion";
 import {
   Activity,
+  ArrowUpRight,
   Ban,
+  BarChart3,
   BookOpen,
   BriefcaseBusiness,
+  Building2,
   CheckCircle2,
+  CircleDot,
   ClipboardCheck,
   DatabaseZap,
   FileUser,
@@ -15,18 +20,26 @@ import {
   Info,
   ListChecks,
   LockKeyhole,
+  MapPin,
+  Network,
+  Radar,
   RefreshCcw,
   Search,
   ServerCog,
   ScrollText,
   ShieldCheck,
   SlidersHorizontal,
+  Sparkles,
+  Target,
+  Timer,
+  TrendingUp,
   TriangleAlert,
+  Users,
   X
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
 import type { ApplicationItem, ApplicationSnapshot } from "@/lib/application-data";
 import type {
   ApprovalRequestItem,
@@ -127,6 +140,26 @@ const navItems = {
   NavigationArea,
   Array<{ label: string; icon: typeof Gauge; view: DashboardView }>
 >;
+
+type OverviewMetric = {
+  label: string;
+  value: string;
+  detail: string;
+  icon: typeof Gauge;
+};
+
+type ExecutiveJobInsight = {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  source: string;
+  compensation: string;
+  tags: string[];
+  matchScore: number;
+  confidenceScore: number;
+  policyScore: number;
+};
 
 type HelpContent = {
   shows: string;
@@ -279,8 +312,6 @@ export function DashboardShell({
   const [activeView, setActiveView] = useState<DashboardView>("job-overview");
   const [helpOpen, setHelpOpen] = useState(false);
   const policySummary = getSourcePolicySummary(dashboardData.sourcePolicies);
-  const liveJobs = liveJobItems(jobSnapshot.jobs);
-  const liveReviewTotal = reviewSnapshot.items.filter((item) => !item.synthetic).length;
   const isProfileView = activeView === "profile";
   const isSourcesView = activeView === "admin-sources";
   const isJobsView = activeView === "jobs";
@@ -292,17 +323,23 @@ export function DashboardShell({
   const activeAreaMeta = navigationAreas.find((area) => area.value === activeArea);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="grid min-h-screen lg:grid-cols-[248px_1fr]">
-        <aside className="border-b border-border bg-white lg:border-b-0 lg:border-r">
+    <div className="min-h-screen overflow-hidden bg-[#0A0F1D] text-foreground">
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_18%_2%,rgba(201,164,76,0.18),transparent_28rem),radial-gradient(circle_at_82%_12%,rgba(99,179,237,0.12),transparent_26rem),linear-gradient(180deg,rgba(255,255,255,0.025),transparent_24rem)]" />
+      <div className="relative grid min-h-screen lg:grid-cols-[280px_1fr]">
+        <motion.aside
+          initial={{ opacity: 0, x: -18 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.45, ease: "easeOut" }}
+          className="z-20 border-b border-gold-500/25 bg-[#0A0F1D]/70 shadow-[18px_0_80px_rgba(0,0,0,0.35)] backdrop-blur-2xl lg:sticky lg:top-0 lg:h-screen lg:border-b-0 lg:border-r"
+        >
           <div className="flex h-full flex-col gap-5 px-4 py-4">
-            <div className="flex items-center gap-3 px-2">
-              <div className="flex size-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
+            <div className="flex items-center gap-3 rounded-card border border-gold-500/20 bg-white/[0.04] px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+              <div className="flex size-10 items-center justify-center rounded-card bg-[linear-gradient(135deg,#f8edc8,#c9a44c_48%,#8a6425)] text-[#0A0F1D] shadow-[0_0_30px_rgba(201,164,76,0.28)]">
                 <ShieldCheck className="size-5" aria-hidden="true" />
               </div>
-              <div>
-                <p className="text-sm font-semibold">Jobfinder</p>
-                <p className="text-xs text-muted-foreground">Job search workspace</p>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-white">Jobfinder</p>
+                <p className="text-xs text-slate-400">Recruitment intelligence</p>
               </div>
             </div>
 
@@ -313,40 +350,50 @@ export function DashboardShell({
                 const firstView = navItems[area.value][0]?.view;
 
                 return (
-                  <button
+                  <motion.button
                     key={area.value}
                     type="button"
                     aria-pressed={isActive}
+                    whileHover={{ y: -1 }}
+                    whileTap={{ scale: 0.985 }}
+                    transition={{ type: "spring", stiffness: 360, damping: 28 }}
                     onClick={() => {
                       setActiveArea(area.value);
                       setActiveView(firstView);
                     }}
                     className={cn(
-                      "flex min-h-12 w-full items-start gap-3 rounded-md border px-3 py-2 text-left",
+                      "group relative flex min-h-14 w-full items-start gap-3 overflow-hidden rounded-card border px-3 py-2.5 text-left transition-colors duration-300",
                       isActive
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-white text-foreground hover:bg-muted/70"
+                        ? "border-gold-500/40 bg-gold-500/15 text-white shadow-[0_0_34px_rgba(201,164,76,0.16)]"
+                        : "border-white/10 bg-white/[0.03] text-slate-300 hover:border-gold-500/25 hover:bg-white/[0.06] hover:text-white"
                     )}
                   >
-                    <Icon className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                    <span className="min-w-0">
+                    {isActive ? (
+                      <span className="pointer-events-none absolute inset-y-0 -left-1 w-24 bg-[linear-gradient(90deg,rgba(248,237,200,0.2),transparent)] opacity-80" />
+                    ) : null}
+                    <Icon
+                      className={cn(
+                        "relative mt-0.5 size-4 shrink-0 transition-colors",
+                        isActive ? "text-gold-200" : "text-gold-300/80"
+                      )}
+                      aria-hidden="true"
+                    />
+                    <span className="relative min-w-0">
                       <span className="block text-sm font-semibold">{area.label}</span>
-                      <span
-                        className={cn(
-                          "mt-0.5 block text-xs leading-4",
-                          isActive ? "text-primary-foreground/80" : "text-muted-foreground"
-                        )}
-                      >
+                      <span className="mt-0.5 block text-xs leading-4 text-slate-400">
                         {area.description}
                       </span>
                     </span>
-                  </button>
+                  </motion.button>
                 );
               })}
             </div>
 
-            <nav aria-label={`${activeAreaMeta?.label ?? "Workspace"} navigation`} className="grid gap-1">
-              <p className="px-3 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            <nav
+              aria-label={`${activeAreaMeta?.label ?? "Workspace"} navigation`}
+              className="grid gap-1"
+            >
+              <p className="px-3 text-xs font-semibold uppercase tracking-[0.12em] text-gold-200/70">
                 {activeAreaMeta?.label}
               </p>
               {navItems[activeArea].map((item) => {
@@ -354,40 +401,53 @@ export function DashboardShell({
                 const isActive = item.view === activeView;
 
                 return (
-                  <button
+                  <motion.button
                     key={item.label}
                     type="button"
                     aria-current={isActive ? "page" : undefined}
+                    whileHover={{ x: 2 }}
+                    whileTap={{ scale: 0.985 }}
+                    transition={{ type: "spring", stiffness: 420, damping: 34 }}
                     onClick={() => setActiveView(item.view)}
                     className={cn(
-                      "flex h-10 w-full items-center gap-3 rounded-md px-3 text-left text-sm font-medium text-muted-foreground",
-                      isActive && "bg-muted text-foreground",
-                      "hover:bg-muted/70 hover:text-foreground"
+                      "group relative flex h-10 w-full items-center gap-3 overflow-hidden rounded-card px-3 text-left text-sm font-medium transition-colors duration-300",
+                      isActive
+                        ? "bg-white/[0.08] text-white shadow-[inset_0_0_0_1px_rgba(201,164,76,0.2),0_0_28px_rgba(201,164,76,0.1)]"
+                        : "text-slate-400 hover:bg-white/[0.05] hover:text-white"
                     )}
                   >
-                    <Icon className="size-4" aria-hidden="true" />
-                    <span>{item.label}</span>
-                  </button>
+                    {isActive ? (
+                      <span className="absolute inset-0 bg-[linear-gradient(110deg,transparent,rgba(248,237,200,0.08),transparent)]" />
+                    ) : null}
+                    <Icon className="relative size-4 text-gold-300/80" aria-hidden="true" />
+                    <span className="relative">{item.label}</span>
+                  </motion.button>
                 );
               })}
             </nav>
-            <div className="mt-auto hidden rounded-card border border-border bg-muted/60 p-3 text-xs text-muted-foreground lg:block">
-              <p className="font-medium text-foreground">Review-first mode</p>
+            <div className="mt-auto hidden rounded-card border border-gold-500/20 bg-[#161D2F]/70 p-3 text-xs text-slate-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] lg:block">
+              <p className="font-medium text-white">Review-first mode</p>
               <p className="mt-1 leading-5">
                 Governed live intake can be enabled; browser automation and submission stay blocked.
               </p>
             </div>
           </div>
-        </aside>
+        </motion.aside>
 
-        <main className="min-w-0">
-          <header className="border-b border-border bg-white px-4 py-4 sm:px-6">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <main className="relative min-w-0">
+          <motion.header
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, ease: "easeOut", delay: 0.05 }}
+            className="sticky top-0 z-10 border-b border-gold-500/15 bg-[#0A0F1D]/72 px-4 py-4 shadow-[0_18px_70px_rgba(0,0,0,0.28)] backdrop-blur-2xl sm:px-6"
+          >
+            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(201,164,76,0.09),transparent_34%,rgba(99,179,237,0.08))]" />
+            <div className="relative flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gold-200/70">
                   {viewEyebrow(activeView)}
                 </p>
-                <h1 className="mt-1 text-2xl font-semibold tracking-normal text-foreground">
+                <h1 className="mt-1 text-2xl font-semibold tracking-normal text-white">
                   {viewTitle(activeView)}
                 </h1>
               </div>
@@ -398,8 +458,8 @@ export function DashboardShell({
                   aria-label={`Open help for ${viewTitle(activeView)}`}
                   onClick={() => setHelpOpen((open) => !open)}
                   className={cn(
-                    "inline-flex size-8 items-center justify-center rounded-md border border-border bg-white text-muted-foreground",
-                    "hover:bg-muted hover:text-foreground"
+                    "inline-flex size-9 items-center justify-center rounded-card border border-gold-500/20 bg-white/[0.05] text-slate-300 transition-colors",
+                    "hover:border-gold-500/35 hover:bg-white/[0.08] hover:text-white"
                   )}
                 >
                   <HelpCircle className="size-4" aria-hidden="true" />
@@ -422,22 +482,11 @@ export function DashboardShell({
                       audit chain {auditSnapshot.summary.chainValid ? "valid" : "invalid"}
                     </Badge>
                   </>
-                ) : (
-                  <>
-                    <Badge tone={liveJobs.length > 0 ? "success" : "warning"}>
-                      {liveJobs.length} live jobs
-                    </Badge>
-                    <Badge tone={liveReviewTotal > 0 ? "warning" : "success"}>
-                      {liveReviewTotal} live reviews
-                    </Badge>
-                    <Badge tone="info">
-                      {applicationSnapshot.summary.total} applications
-                    </Badge>
-                  </>
-                )}
+                ) : null}
+                <ApiHealthBadge health={health} />
               </div>
             </div>
-          </header>
+          </motion.header>
 
           {isSourcesView ? (
             <SourcesWorkspace policies={dashboardData.sourcePolicies} health={health} />
@@ -504,109 +553,599 @@ function JobSearchOverview({
   auditSnapshot: AuditSnapshot;
   settingsSnapshot: SettingsSnapshot;
 }) {
+  const executiveJobs = getExecutiveJobInsights(jobSnapshot);
+  const liveReviewCount = reviewSnapshot.items.filter((item) => !item.synthetic).length;
+  const liveApplications = applicationSnapshot.summary.total;
+  const interviewsPending = approvalSnapshot.summary.pending;
+  const pipelineMatch =
+    executiveJobs.length > 0
+      ? Math.round(
+          executiveJobs.reduce((total, job) => total + job.matchScore, 0) / executiveJobs.length
+        )
+      : 0;
+  const metrics = [
+    {
+      label: "Live Jobs",
+      value: String(executiveJobs.length),
+      detail: "approved live roles",
+      icon: BriefcaseBusiness
+    },
+    {
+      label: "Applications",
+      value: String(liveApplications),
+      detail: "tracked in governed flow",
+      icon: ClipboardCheck
+    },
+    {
+      label: "Pipeline Match",
+      value: `${pipelineMatch}%`,
+      detail: executiveJobs.length > 0 ? "live role signal" : "awaiting live roles",
+      icon: Target
+    },
+    {
+      label: "Interviews Pending",
+      value: String(interviewsPending),
+      detail: "review packets queued",
+      icon: Users
+    }
+  ] satisfies OverviewMetric[];
+
   return (
-    <div className="grid gap-4 p-4 sm:p-6 xl:grid-cols-[1.5fr_1fr]">
-      <section className="grid gap-4">
-        <SafeLocalModeIntro />
-        <NextActionPanel
-          jobSnapshot={jobSnapshot}
-          reviewSnapshot={reviewSnapshot}
-          approvalSnapshot={approvalSnapshot}
-          applicationSnapshot={applicationSnapshot}
-        />
-        <CandidateProfilePanel snapshot={candidateSnapshot} />
-        <JobsPreviewPanel snapshot={jobSnapshot} />
-        <PipelinePanel
-          jobSnapshot={jobSnapshot}
-          reviewSnapshot={reviewSnapshot}
-          applicationSnapshot={applicationSnapshot}
-        />
-        <ApplicationTrackerPreview snapshot={applicationSnapshot} />
-      </section>
-      <section className="grid content-start gap-4">
-        <HealthPanel health={health} />
-        <ReviewQueuePanel items={reviewSnapshot.buckets} />
-        <ApprovalSummaryPanel snapshot={approvalSnapshot} />
-        <SafeModePanel
-          source={settingsSnapshot.source}
-          chainValid={auditSnapshot.summary.chainValid}
-        />
-        <GuardrailPanel />
+    <div className="relative grid gap-5 p-4 sm:p-6 2xl:p-8">
+      <section className="grid gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.72fr)]">
+        <div className="grid gap-5">
+          <ExecutiveHero
+            health={health}
+            liveReviewCount={liveReviewCount}
+            pipelineMatch={pipelineMatch}
+            source={jobSnapshot.source}
+          />
+          <section
+            aria-label="Job Search Overview"
+            className="grid auto-rows-[minmax(148px,auto)] gap-4 md:grid-cols-2 xl:grid-cols-4"
+          >
+            {metrics.map((metric, index) => (
+              <ExecutiveMetricCard key={metric.label} metric={metric} index={index} />
+            ))}
+          </section>
+          <section className="grid gap-4 xl:grid-cols-[minmax(0,1.08fr)_minmax(300px,0.82fr)]">
+            <PipelineCommandCard
+              pipelineMatch={pipelineMatch}
+              liveJobs={executiveJobs.length}
+              applications={liveApplications}
+              reviews={liveReviewCount}
+            />
+            <IntelligenceSignalsCard
+              candidateSnapshot={candidateSnapshot}
+              auditSnapshot={auditSnapshot}
+              settingsSnapshot={settingsSnapshot}
+            />
+          </section>
+          <ExecutiveJobList jobs={executiveJobs} />
+        </div>
+        <section className="grid content-start gap-4">
+          <PremiumOperationsCard health={health} approvalSnapshot={approvalSnapshot} />
+          <ExecutiveReviewCard items={reviewSnapshot.buckets} />
+          <ExecutiveSafetyCard
+            source={settingsSnapshot.source}
+            chainValid={auditSnapshot.summary.chainValid}
+            settingsSnapshot={settingsSnapshot}
+          />
+        </section>
       </section>
     </div>
   );
 }
 
-function SafeLocalModeIntro() {
+function ExecutiveHero({
+  health,
+  liveReviewCount,
+  pipelineMatch,
+  source
+}: {
+  health: ApiHealthStatus;
+  liveReviewCount: number;
+  pipelineMatch: number;
+  source: JobCatalogSnapshot["source"];
+}) {
   return (
-    <Card className="border-blue-200 bg-blue-50/70">
-      <CardContent className="flex items-start gap-3">
-        <ShieldCheck className="mt-0.5 size-5 shrink-0 text-blue-700" aria-hidden="true" />
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-blue-950">Live job board intake</p>
-          <p className="mt-1 text-sm leading-5 text-blue-900">
-            Jobfinder is configured for governed live intake from approved public job sources.
-            Reed, Hays, Totaljobs, CityJobs, and eFinancialCareers can be queued for bounded
-            discovery and extraction. Indeed remains manual-only unless an approved official
-            integration is configured.
+    <PremiumCard className="min-h-[230px]">
+      <CardContent className="relative grid gap-6 p-5 md:p-6 lg:grid-cols-[minmax(0,1fr)_auto]">
+        <div className="max-w-3xl">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge
+              tone="neutral"
+              className="border-gold-500/30 bg-gold-500/15 text-gold-100"
+            >
+              <Sparkles className="mr-1 size-3.5" aria-hidden="true" />
+              AI talent desk
+            </Badge>
+            <Badge tone={source === "api" ? "info" : "warning"}>
+              {formatDataSource(source)}
+            </Badge>
+          </div>
+          <h2 className="mt-5 max-w-2xl text-3xl font-semibold leading-tight text-white sm:text-4xl">
+            Job Search Overview
+          </h2>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
+            Executive-grade role intelligence, confidence scoring, source posture, and approval
+            flow in one governed command surface.
           </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <span className="inline-flex min-h-10 items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-4 text-sm text-slate-200">
+              <Radar className="size-4 text-gold-200" aria-hidden="true" />
+              {liveReviewCount} review signals
+            </span>
+            <span className="inline-flex min-h-10 items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-4 text-sm text-slate-200">
+              <Network className="size-4 text-cyan-100" aria-hidden="true" />
+              Source-gated intake
+            </span>
+          </div>
+        </div>
+        <div className="grid min-w-[220px] content-between rounded-card border border-gold-500/20 bg-[#0A0F1D]/65 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs uppercase tracking-[0.12em] text-slate-400">
+              Market pulse
+            </span>
+            <ApiHealthBadge health={health} compact />
+          </div>
+          <div className="mt-8">
+            <p className="font-[var(--font-serif-numeral)] text-5xl text-gold-100">
+              {pipelineMatch}
+            </p>
+            <p className="mt-1 text-xs uppercase tracking-[0.12em] text-slate-400">
+              composite pipeline index
+            </p>
+          </div>
         </div>
       </CardContent>
+    </PremiumCard>
+  );
+}
+
+function ExecutiveMetricCard({
+  metric,
+  index
+}: {
+  metric: OverviewMetric;
+  index: number;
+}) {
+  const Icon = metric.icon;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: "easeOut", delay: 0.08 + index * 0.05 }}
+      whileHover={{ y: -4, scale: 1.015 }}
+    >
+      <PremiumCard className="h-full min-h-36">
+        <CardContent className="relative flex h-full flex-col justify-between p-4">
+          <div className="flex items-center justify-between gap-3">
+            <span className="inline-flex size-9 items-center justify-center rounded-card border border-gold-500/20 bg-gold-500/10 text-gold-100">
+              <Icon className="size-4" aria-hidden="true" />
+            </span>
+            <ArrowUpRight className="size-4 text-gold-200/70" aria-hidden="true" />
+          </div>
+          <div className="mt-5">
+            <p className="font-[var(--font-serif-numeral)] text-5xl leading-none text-gold-100">
+              {metric.value}
+            </p>
+            <p className="mt-3 text-sm font-semibold text-white">{metric.label}</p>
+            <p className="mt-1 text-xs text-slate-400">{metric.detail}</p>
+          </div>
+        </CardContent>
+      </PremiumCard>
+    </motion.div>
+  );
+}
+
+function PipelineCommandCard({
+  pipelineMatch,
+  liveJobs,
+  applications,
+  reviews
+}: {
+  pipelineMatch: number;
+  liveJobs: number;
+  applications: number;
+  reviews: number;
+}) {
+  return (
+    <PremiumCard className="min-h-[260px]">
+      <CardHeader className="relative flex flex-col gap-3 border-gold-500/15 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <CardTitle className="text-white">Pipeline Visualization</CardTitle>
+          <p className="mt-1 text-xs text-slate-400">Match strength across active executive flow</p>
+        </div>
+        <Badge tone="warning">Fintech signal model</Badge>
+      </CardHeader>
+      <CardContent className="relative grid gap-6 p-5">
+        <div>
+          <div className="mb-3 flex items-end justify-between gap-3">
+            <div>
+              <p className="font-[var(--font-serif-numeral)] text-6xl leading-none text-gold-100">
+                {pipelineMatch}%
+              </p>
+              <p className="mt-1 text-xs uppercase tracking-[0.12em] text-slate-400">
+                Pipeline match
+              </p>
+            </div>
+            <TrendingUp className="mb-2 size-7 text-gold-200" aria-hidden="true" />
+          </div>
+          <Progress
+            value={pipelineMatch}
+            className="h-3 border border-gold-500/15 bg-[#0A0F1D] shadow-[inset_0_1px_5px_rgba(0,0,0,0.55)]"
+            indicatorClassName="relative overflow-hidden bg-[linear-gradient(90deg,#8a6425,#c9a44c_42%,#f8edc8_70%,#b88a34)] shadow-[0_0_24px_rgba(201,164,76,0.5)] after:absolute after:inset-0 after:bg-[linear-gradient(110deg,transparent,rgba(255,255,255,0.42),transparent)] after:animate-[gold-sheen_2.8s_ease-in-out_infinite]"
+          />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {[
+            { label: "Live roles", value: liveJobs, icon: BriefcaseBusiness },
+            { label: "Applications", value: applications, icon: ClipboardCheck },
+            { label: "Review signals", value: reviews, icon: Radar }
+          ].map((item) => {
+            const Icon = item.icon;
+            return (
+              <div
+                key={item.label}
+                className="rounded-card border border-white/10 bg-white/[0.04] p-3"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs text-slate-400">{item.label}</p>
+                  <Icon className="size-4 text-gold-200/80" aria-hidden="true" />
+                </div>
+                <p className="mt-3 font-[var(--font-serif-numeral)] text-3xl text-white">
+                  {item.value}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </PremiumCard>
+  );
+}
+
+function IntelligenceSignalsCard({
+  candidateSnapshot,
+  auditSnapshot,
+  settingsSnapshot
+}: {
+  candidateSnapshot: CandidateWorkspaceSnapshot;
+  auditSnapshot: AuditSnapshot;
+  settingsSnapshot: SettingsSnapshot;
+}) {
+  const evidenceCount = candidateSnapshot.evidence.filter((item) => !item.synthetic).length;
+  const enabledCapabilities = settingsSnapshot.runtime.capabilities.filter(
+    (capability) => capability.enabled
+  ).length;
+  const rows = [
+    { label: "Evidence nodes", value: evidenceCount, icon: CircleDot },
+    { label: "Audit chain", value: auditSnapshot.summary.chainValid ? "valid" : "review", icon: ShieldCheck },
+    { label: "Runtime gates", value: enabledCapabilities, icon: ServerCog }
+  ];
+
+  return (
+    <PremiumCard className="min-h-[260px]">
+      <CardHeader className="relative border-gold-500/15">
+        <CardTitle className="text-white">Intelligence Signals</CardTitle>
+      </CardHeader>
+      <CardContent className="relative grid gap-3 p-5">
+        {rows.map((row) => {
+          const Icon = row.icon;
+          return (
+            <div
+              key={row.label}
+              className="flex min-h-16 items-center justify-between gap-4 rounded-card border border-white/10 bg-[#0A0F1D]/50 px-4"
+            >
+              <div className="flex items-center gap-3">
+                <span className="inline-flex size-8 items-center justify-center rounded-card bg-gold-500/10 text-gold-100">
+                  <Icon className="size-4" aria-hidden="true" />
+                </span>
+                <p className="text-sm text-slate-300">{row.label}</p>
+              </div>
+              <p className="font-[var(--font-serif-numeral)] text-2xl text-white">{row.value}</p>
+            </div>
+          );
+        })}
+      </CardContent>
+    </PremiumCard>
+  );
+}
+
+function ExecutiveJobList({ jobs }: { jobs: readonly ExecutiveJobInsight[] }) {
+  return (
+    <PremiumCard>
+      <CardHeader className="relative flex flex-col gap-3 border-gold-500/15 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <CardTitle className="text-white">Executive Job Intelligence</CardTitle>
+          <p className="mt-1 text-xs text-slate-400">High-confidence roles ranked by governed signals</p>
+        </div>
+        <Badge
+          tone="neutral"
+          className="border-gold-500/30 bg-gold-500/15 text-gold-100"
+        >
+          {jobs.length} live jobs
+        </Badge>
+      </CardHeader>
+      <CardContent className="relative grid gap-4 p-4">
+        {jobs.map((job, index) => (
+          <ExecutiveJobCard key={job.id} job={job} index={index} />
+        ))}
+      </CardContent>
+    </PremiumCard>
+  );
+}
+
+function ExecutiveJobCard({
+  job,
+  index
+}: {
+  job: ExecutiveJobInsight;
+  index: number;
+}) {
+  return (
+    <motion.article
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: "easeOut", delay: 0.16 + index * 0.06 }}
+      whileHover={{
+        y: -4,
+        scale: 1.01,
+        boxShadow: "0 26px 80px rgba(201, 164, 76, 0.18)"
+      }}
+      whileTap={{ scale: 0.995 }}
+      className="group cursor-pointer rounded-card border border-gold-500/18 bg-[#0F1629]/88 shadow-[0_16px_48px_rgba(0,0,0,0.28)] transition-colors hover:border-gold-500/42"
+    >
+      <div className="grid gap-5 p-4 lg:grid-cols-[minmax(0,1fr)_minmax(250px,0.42fr)] lg:items-center">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone="info">{job.source}</Badge>
+            <Badge tone="neutral">{job.compensation}</Badge>
+          </div>
+          <h3 className="mt-4 text-xl font-semibold leading-tight text-white">{job.title}</h3>
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-400">
+            <span className="inline-flex items-center gap-1.5">
+              <Building2 className="size-4 text-gold-200/80" aria-hidden="true" />
+              {job.company}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <MapPin className="size-4 text-gold-200/80" aria-hidden="true" />
+              {job.location}
+            </span>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {job.tags.map((tag) => (
+              <span
+                key={tag}
+                className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-slate-300 transition-colors group-hover:border-gold-500/25 group-hover:text-gold-100"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+        <div className="rounded-card border border-white/10 bg-[#0A0F1D]/58 p-4">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-white">Confidence Scores</p>
+              <p className="mt-1 text-xs text-slate-400">match / extraction / policy</p>
+            </div>
+            <BarChart3 className="size-5 text-gold-200" aria-hidden="true" />
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <ConfidenceRing label="Match" value={job.matchScore} />
+            <ConfidenceRing label="Data" value={job.confidenceScore} />
+            <ConfidenceRing label="Policy" value={job.policyScore} />
+          </div>
+          <motion.button
+            type="button"
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.98 }}
+            className="mt-5 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#f8edc8,#c9a44c_48%,#9c7428)] px-5 text-sm font-bold text-[#0A0F1D] shadow-[0_0_28px_rgba(201,164,76,0.22)] transition-shadow hover:shadow-[0_0_42px_rgba(201,164,76,0.38)]"
+          >
+            Review
+            <ArrowUpRight className="size-4" aria-hidden="true" />
+          </motion.button>
+        </div>
+      </div>
+    </motion.article>
+  );
+}
+
+function ConfidenceRing({ label, value }: { label: string; value: number }) {
+  const gradientId = useId();
+  const radius = 24;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (clampPercent(value) / 100) * circumference;
+
+  return (
+    <div className="grid justify-items-center gap-2">
+      <svg className="size-16 -rotate-90" viewBox="0 0 64 64" aria-hidden="true">
+        <circle
+          cx="32"
+          cy="32"
+          r={radius}
+          fill="none"
+          stroke="rgba(255,255,255,0.08)"
+          strokeWidth="6"
+        />
+        <motion.circle
+          cx="32"
+          cy="32"
+          r={radius}
+          fill="none"
+          stroke={`url(#${gradientId})`}
+          strokeLinecap="round"
+          strokeWidth="6"
+          strokeDasharray={circumference}
+          initial={{ strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset: offset }}
+          transition={{ duration: 0.9, ease: "easeOut" }}
+        />
+        <defs>
+          <linearGradient id={gradientId} x1="8" x2="56" y1="8" y2="56">
+            <stop stopColor="#f8edc8" />
+            <stop offset="0.52" stopColor="#c9a44c" />
+            <stop offset="1" stopColor="#8a6425" />
+          </linearGradient>
+        </defs>
+      </svg>
+      <div className="-mt-14 grid h-16 place-items-center">
+        <span className="font-[var(--font-serif-numeral)] text-xl text-gold-100">{value}</span>
+      </div>
+      <p className="text-xs text-slate-400">{label}</p>
+    </div>
+  );
+}
+
+function PremiumOperationsCard({
+  health,
+  approvalSnapshot
+}: {
+  health: ApiHealthStatus;
+  approvalSnapshot: ApprovalSnapshot;
+}) {
+  return (
+    <PremiumCard>
+      <CardHeader className="relative border-gold-500/15">
+        <CardTitle className="text-white">Executive Header Signals</CardTitle>
+      </CardHeader>
+      <CardContent className="relative grid gap-3 p-4">
+        <div className="flex min-h-14 items-center justify-between gap-4 rounded-card border border-white/10 bg-white/[0.04] px-4">
+          <span className="text-sm text-slate-300">API Health</span>
+          <ApiHealthBadge health={health} compact />
+        </div>
+        <div className="flex min-h-14 items-center justify-between gap-4 rounded-card border border-white/10 bg-white/[0.04] px-4">
+          <span className="text-sm text-slate-300">Pending approvals</span>
+          <span className="font-[var(--font-serif-numeral)] text-3xl text-gold-100">
+            {approvalSnapshot.summary.pending}
+          </span>
+        </div>
+        <div className="flex min-h-14 items-center justify-between gap-4 rounded-card border border-white/10 bg-white/[0.04] px-4">
+          <span className="text-sm text-slate-300">Safety flags</span>
+          <Badge tone="success">zero external side effects</Badge>
+        </div>
+      </CardContent>
+    </PremiumCard>
+  );
+}
+
+function ExecutiveReviewCard({ items }: { items: readonly ReviewQueueBucket[] }) {
+  return (
+    <PremiumCard>
+      <CardHeader className="relative border-gold-500/15">
+        <CardTitle className="text-white">Review Risk</CardTitle>
+      </CardHeader>
+      <CardContent className="relative grid gap-3 p-4">
+        {items.slice(0, 4).map((item) => (
+          <div
+            key={item.label}
+            className="flex min-h-14 items-center justify-between gap-3 rounded-card border border-white/10 bg-[#0A0F1D]/50 px-3"
+          >
+            <div className="min-w-0">
+              <p className="truncate text-sm text-white">{item.label}</p>
+              <p className="text-xs text-slate-400">approval gate</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge tone={riskTone(item.risk)}>{item.risk}</Badge>
+              <span className="w-7 text-right font-[var(--font-serif-numeral)] text-2xl text-gold-100">
+                {item.count}
+              </span>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </PremiumCard>
+  );
+}
+
+function ExecutiveSafetyCard({
+  source,
+  chainValid,
+  settingsSnapshot
+}: {
+  source: SettingsSnapshot["source"];
+  chainValid: boolean;
+  settingsSnapshot: SettingsSnapshot;
+}) {
+  return (
+    <PremiumCard>
+      <CardHeader className="relative border-gold-500/15">
+        <CardTitle className="text-white">Governance Layer</CardTitle>
+      </CardHeader>
+      <CardContent className="relative grid gap-3 p-4">
+        {[
+          { label: "Data source", value: formatDataSource(source), icon: DatabaseZap },
+          { label: "Audit chain", value: chainValid ? "valid" : "invalid", icon: Activity },
+          {
+            label: "Runtime gates",
+            value: String(settingsSnapshot.runtime.capabilities.length),
+            icon: Timer
+          }
+        ].map((row) => {
+          const Icon = row.icon;
+          return (
+            <div key={row.label} className="flex items-center justify-between gap-4 text-sm">
+              <span className="inline-flex items-center gap-2 text-slate-400">
+                <Icon className="size-4 text-gold-200/80" aria-hidden="true" />
+                {row.label}
+              </span>
+              <span className="font-medium text-white">{row.value}</span>
+            </div>
+          );
+        })}
+      </CardContent>
+    </PremiumCard>
+  );
+}
+
+function PremiumCard({
+  className,
+  children
+}: {
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <Card
+      className={cn(
+        "relative overflow-hidden border-gold-500/20 bg-[#161D2F]/88 text-white shadow-[0_22px_80px_rgba(0,0,0,0.34)] backdrop-blur-xl",
+        "before:pointer-events-none before:absolute before:inset-0 before:bg-[linear-gradient(135deg,rgba(248,237,200,0.08),transparent_28%,rgba(255,255,255,0.025)_58%,transparent)]",
+        "after:pointer-events-none after:absolute after:inset-px after:rounded-[7px] after:border after:border-white/[0.045]",
+        className
+      )}
+    >
+      {children}
     </Card>
   );
 }
 
-function NextActionPanel({
-  jobSnapshot,
-  reviewSnapshot,
-  approvalSnapshot,
-  applicationSnapshot
+function ApiHealthBadge({
+  health,
+  compact = false
 }: {
-  jobSnapshot: JobCatalogSnapshot;
-  reviewSnapshot: ReviewQueueSnapshot;
-  approvalSnapshot: ApprovalSnapshot;
-  applicationSnapshot: ApplicationSnapshot;
+  health: ApiHealthStatus;
+  compact?: boolean;
 }) {
-  const liveJobs = liveJobItems(jobSnapshot.jobs);
-  const liveReviewCount = reviewSnapshot.items.filter((item) => !item.synthetic).length;
-  const actions = [
-    {
-      label: "Review job matches",
-      detail: `${liveReviewCount} live jobs need a human check before they can move forward.`,
-      tone: liveReviewCount > 0 ? "warning" : "success"
-    },
-    {
-      label: "Track applications",
-      detail: `${applicationSnapshot.summary.total} applications are in the tracker.`,
-      tone: "info"
-    },
-    {
-      label: "Check approvals",
-      detail: `${approvalSnapshot.summary.pending} requests are waiting for review.`,
-      tone: approvalSnapshot.summary.pending > 0 ? "warning" : "success"
-    }
-  ] satisfies Array<{ label: string; detail: string; tone: "info" | "success" | "warning" }>;
+  const isHealthy = health.state === "healthy";
+  const label = isHealthy ? "Operational" : health.state === "unconfigured" ? "Config pending" : "Degraded";
 
   return (
-    <Card>
-      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <CardTitle>Job Search Overview</CardTitle>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Start here to import live postings, review matches, and track applications.
-          </p>
-        </div>
-        <Badge tone={liveJobs.length > 0 ? "success" : "warning"}>{liveJobs.length} live jobs</Badge>
-      </CardHeader>
-      <CardContent className="grid gap-3 md:grid-cols-3">
-        {actions.map((action) => (
-          <div key={action.label} className="rounded-md border border-border bg-muted/40 px-3 py-3">
-            <Badge tone={action.tone}>{action.label}</Badge>
-            <p className="mt-3 text-sm leading-5 text-muted-foreground">{action.detail}</p>
-          </div>
-        ))}
-      </CardContent>
-    </Card>
+    <Badge
+      tone="neutral"
+      className={cn(
+        "relative gap-2 border-gold-500/35 bg-gold-500/20 text-gold-100 shadow-[0_0_28px_rgba(201,164,76,0.18)]",
+        compact ? "px-2.5" : "px-3 py-1"
+      )}
+    >
+      <span className="relative flex size-2.5">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-gold-500 opacity-70" />
+        <span className="relative inline-flex size-2.5 rounded-full bg-gold-300 shadow-[0_0_12px_rgba(201,164,76,0.8)]" />
+      </span>
+      {compact ? label : `API Health: ${label}`}
+    </Badge>
   );
 }
 
@@ -1089,7 +1628,7 @@ function SourcePolicyReviewPanel() {
                 value={actorId}
                 onChange={(event) => setActorId(event.currentTarget.value)}
                 autoComplete="username"
-                className="h-10 rounded-md border border-border bg-white px-3 text-sm"
+                className="h-10 rounded-md border border-border bg-[#0F1729] px-3 text-sm"
               />
             </label>
             <label className="grid gap-2 text-sm font-medium">
@@ -1099,7 +1638,7 @@ function SourcePolicyReviewPanel() {
                 value={loginSecret}
                 onChange={(event) => setLoginSecret(event.currentTarget.value)}
                 autoComplete="current-password"
-                className="h-10 rounded-md border border-border bg-white px-3 text-sm"
+                className="h-10 rounded-md border border-border bg-[#0F1729] px-3 text-sm"
               />
             </label>
           </div>
@@ -1109,7 +1648,7 @@ function SourcePolicyReviewPanel() {
               <select
                 value={selectedSourceId}
                 onChange={(event) => setSelectedSourceId(event.currentTarget.value)}
-                className="h-10 rounded-md border border-border bg-white px-3 text-sm"
+                className="h-10 rounded-md border border-border bg-[#0F1729] px-3 text-sm"
               >
                 {sources.length === 0 ? <option value="">Refresh sources</option> : null}
                 {sources.map((source) => (
@@ -1123,7 +1662,7 @@ function SourcePolicyReviewPanel() {
               type="button"
               onClick={handleRefreshSources}
               disabled={isBusy}
-              className="inline-flex h-10 items-center justify-center gap-2 self-end rounded-md border border-border bg-white px-3 text-sm font-semibold disabled:cursor-wait disabled:opacity-70"
+              className="inline-flex h-10 items-center justify-center gap-2 self-end rounded-md border border-border bg-[#0F1729] px-3 text-sm font-semibold disabled:cursor-wait disabled:opacity-70"
             >
               <RefreshCcw className={cn("size-4", isBusy && "animate-spin")} aria-hidden="true" />
               Refresh
@@ -1140,7 +1679,7 @@ function SourcePolicyReviewPanel() {
             <select
               value={status}
               onChange={(event) => setStatus(event.currentTarget.value)}
-              className="h-10 rounded-md border border-border bg-white px-3 text-sm"
+              className="h-10 rounded-md border border-border bg-[#0F1729] px-3 text-sm"
             >
               <option value="allowed">allowed</option>
               <option value="manual_only">manual only</option>
@@ -1169,7 +1708,7 @@ function SourcePolicyReviewPanel() {
               value={reason}
               onChange={(event) => setReason(event.currentTarget.value)}
               rows={3}
-              className="rounded-md border border-border bg-white px-3 py-2 text-sm"
+              className="rounded-md border border-border bg-[#0F1729] px-3 py-2 text-sm"
             />
           </label>
           <button
@@ -1269,7 +1808,7 @@ function PolicyCheckPanel({ policies }: { policies: readonly SourcePolicy[] }) {
             <select
               value={selectedDomain}
               onChange={(event) => setSelectedDomain(event.currentTarget.value)}
-              className="h-10 rounded-md border border-border bg-white px-3 text-sm"
+              className="h-10 rounded-md border border-border bg-[#0F1729] px-3 text-sm"
             >
               {policies.map((policy) => (
                 <option key={policy.domain} value={policy.domain}>
@@ -1287,7 +1826,7 @@ function PolicyCheckPanel({ policies }: { policies: readonly SourcePolicy[] }) {
                   value={customSource}
                   onChange={(event) => setCustomSource(event.currentTarget.value)}
                   placeholder="Unlisted board"
-                  className="h-10 rounded-md border border-border bg-white px-3 text-sm"
+                  className="h-10 rounded-md border border-border bg-[#0F1729] px-3 text-sm"
                 />
               </label>
               <label className="grid gap-2 text-sm font-medium">
@@ -1296,7 +1835,7 @@ function PolicyCheckPanel({ policies }: { policies: readonly SourcePolicy[] }) {
                   value={customDomain}
                   onChange={(event) => setCustomDomain(event.currentTarget.value)}
                   placeholder="jobs.example.com"
-                  className="h-10 rounded-md border border-border bg-white px-3 text-sm"
+                  className="h-10 rounded-md border border-border bg-[#0F1729] px-3 text-sm"
                 />
               </label>
             </div>
@@ -1306,7 +1845,7 @@ function PolicyCheckPanel({ policies }: { policies: readonly SourcePolicy[] }) {
             <select
               value={action}
               onChange={(event) => setAction(event.currentTarget.value as SourcePolicyAction)}
-              className="h-10 rounded-md border border-border bg-white px-3 text-sm"
+              className="h-10 rounded-md border border-border bg-[#0F1729] px-3 text-sm"
             >
               {sourcePolicyActions.map((policyAction) => (
                 <option key={policyAction} value={policyAction}>
@@ -1355,66 +1894,6 @@ function PolicyCheckPanel({ policies }: { policies: readonly SourcePolicy[] }) {
   );
 }
 
-function PipelinePanel({
-  jobSnapshot,
-  reviewSnapshot,
-  applicationSnapshot
-}: {
-  jobSnapshot: JobCatalogSnapshot;
-  reviewSnapshot: ReviewQueueSnapshot;
-  applicationSnapshot: ApplicationSnapshot;
-}) {
-  const liveJobs = liveJobItems(jobSnapshot.jobs);
-  const liveReviewCount = reviewSnapshot.items.filter((item) => !item.synthetic).length;
-  const columns = [
-    {
-      label: "Imported",
-      count: liveJobs.length,
-      description: "Live postings imported from approved job-board or ATS sources."
-    },
-    {
-      label: "Needs Review",
-      count: liveReviewCount,
-      description: "Live postings waiting for source, confidence, or evidence review."
-    },
-    {
-      label: "Ready",
-      count: liveJobs.filter((job) => job.reviewStatus === "ready").length,
-      description: "Live postings ready for operator review and application tracking."
-    },
-    {
-      label: "Applications",
-      count: applicationSnapshot.summary.total,
-      description: "Application tracker records created from approved live postings."
-    }
-  ];
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Live Pipeline</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid gap-3 md:grid-cols-4">
-          {columns.map((column) => (
-            <div
-              key={column.label}
-              className="min-h-36 rounded-card border border-border bg-muted/40 p-3"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="text-sm font-semibold">{column.label}</h3>
-                <span className="font-mono text-xl font-semibold">{column.count}</span>
-              </div>
-              <Separator className="my-3" />
-              <p className="text-xs leading-5 text-muted-foreground">{column.description}</p>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 function ReviewQueuePanel({ items }: { items: readonly ReviewQueueBucket[] }) {
   return (
     <Card>
@@ -1437,90 +1916,6 @@ function ReviewQueuePanel({ items }: { items: readonly ReviewQueueBucket[] }) {
             </div>
           </div>
         ))}
-      </CardContent>
-    </Card>
-  );
-}
-
-function JobsPreviewPanel({ snapshot }: { snapshot: JobCatalogSnapshot }) {
-  const visibleJobs = liveJobItems(snapshot.jobs).slice(0, 4);
-
-  return (
-    <Card>
-      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <CardTitle>Jobs</CardTitle>
-        <div className="flex flex-wrap gap-2">
-          <Badge tone={snapshot.source === "api" ? "info" : "warning"}>
-            {formatDataSource(snapshot.source)}
-          </Badge>
-          <Badge tone={visibleJobs.length > 0 ? "success" : "warning"}>
-            {visibleJobs.length} live jobs
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="grid gap-3">
-        {visibleJobs.length === 0 ? (
-          <div className="rounded-md border border-border bg-muted/40 px-3 py-4">
-            <p className="text-sm font-medium">No live jobs imported yet.</p>
-            <p className="mt-2 text-sm leading-5 text-muted-foreground">
-              Use the Operator Console to queue approved public URLs from Reed, Hays, Totaljobs,
-              CityJobs, or eFinancialCareers.
-            </p>
-          </div>
-        ) : (
-          visibleJobs.map((job) => (
-            <div
-              key={job.id}
-              className="grid gap-3 rounded-md border border-border px-3 py-3 md:grid-cols-[1.4fr_0.8fr_auto]"
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{job.title}</p>
-                <p className="mt-1 truncate text-xs text-muted-foreground">{job.company}</p>
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-xs text-muted-foreground">{job.source}</p>
-                <p className="mt-1 truncate font-mono text-xs text-muted-foreground">
-                  {job.externalId}
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2 md:justify-end">
-                <Badge tone={remoteTone(job.remoteType)}>{job.remoteType}</Badge>
-                <ReviewStatusBadge status={job.reviewStatus} />
-              </div>
-            </div>
-          ))
-        )}
-        <p className="text-sm leading-5 text-muted-foreground">
-          Live job data appears here after approved source intake. Placeholder records are hidden
-          from the primary job search workflow.
-        </p>
-      </CardContent>
-    </Card>
-  );
-}
-
-function ApplicationTrackerPreview({ snapshot }: { snapshot: ApplicationSnapshot }) {
-  return (
-    <Card>
-      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <CardTitle>Applications</CardTitle>
-        <div className="flex flex-wrap gap-2">
-          <Badge tone={snapshot.source === "api" ? "info" : "warning"}>
-            {formatDataSource(snapshot.source)}
-          </Badge>
-          <Badge tone={snapshot.summary.externalSideEffects > 0 ? "danger" : "success"}>
-            {snapshot.summary.externalSideEffects} safety flags
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="grid gap-4">
-        <div className="grid gap-2 sm:grid-cols-4">
-          <MetricTile label="Tracked" value={snapshot.summary.total} />
-          <MetricTile label="Needs Review" value={snapshot.summary.inReview} />
-          <MetricTile label="Approved" value={snapshot.summary.approved} />
-          <MetricTile label="Submitted" value={snapshot.summary.submitted} />
-        </div>
-        <p className="text-sm leading-5 text-muted-foreground">{snapshot.detail}</p>
       </CardContent>
     </Card>
   );
@@ -2121,7 +2516,7 @@ function OperatorConsolePanel({ runtime }: { runtime: RuntimeSettings }) {
               value={actorId}
               onChange={(event) => setActorId(event.target.value)}
               autoComplete="username"
-              className="h-10 rounded-md border border-border bg-white px-3 text-sm font-normal outline-none focus:border-primary"
+              className="h-10 rounded-md border border-border bg-[#0F1729] px-3 text-sm font-normal outline-none focus:border-primary"
             />
           </label>
           <label className="grid gap-1 text-sm font-medium">
@@ -2131,7 +2526,7 @@ function OperatorConsolePanel({ runtime }: { runtime: RuntimeSettings }) {
               value={loginSecret}
               onChange={(event) => setLoginSecret(event.target.value)}
               autoComplete="current-password"
-              className="h-10 rounded-md border border-border bg-white px-3 text-sm font-normal outline-none focus:border-primary"
+              className="h-10 rounded-md border border-border bg-[#0F1729] px-3 text-sm font-normal outline-none focus:border-primary"
             />
           </label>
           <button
@@ -2149,7 +2544,7 @@ function OperatorConsolePanel({ runtime }: { runtime: RuntimeSettings }) {
         >
           <div className="grid gap-1 text-sm font-medium">
             Mode
-            <div className="flex h-10 overflow-hidden rounded-md border border-border bg-white">
+            <div className="flex h-10 overflow-hidden rounded-md border border-border bg-[#0F1729]">
               {(["job", "search"] as const).map((mode) => (
                 <button
                   key={mode}
@@ -2179,7 +2574,7 @@ function OperatorConsolePanel({ runtime }: { runtime: RuntimeSettings }) {
               value={queueUrl}
               onChange={(event) => setQueueUrl(event.target.value)}
               placeholder="https://www.reed.co.uk/jobs/..."
-              className="h-10 rounded-md border border-border bg-white px-3 text-sm font-normal outline-none focus:border-primary"
+              className="h-10 rounded-md border border-border bg-[#0F1729] px-3 text-sm font-normal outline-none focus:border-primary"
             />
           </label>
           <label className="grid gap-1 text-sm font-medium">
@@ -2188,7 +2583,7 @@ function OperatorConsolePanel({ runtime }: { runtime: RuntimeSettings }) {
               value={queueSourceDomain}
               onChange={(event) => setQueueSourceDomain(event.target.value)}
               placeholder="reed.co.uk"
-              className="h-10 rounded-md border border-border bg-white px-3 text-sm font-normal outline-none focus:border-primary"
+              className="h-10 rounded-md border border-border bg-[#0F1729] px-3 text-sm font-normal outline-none focus:border-primary"
             />
           </label>
           <label className="grid gap-1 text-sm font-medium">
@@ -2200,7 +2595,7 @@ function OperatorConsolePanel({ runtime }: { runtime: RuntimeSettings }) {
               value={queueMaxResults}
               onChange={(event) => setQueueMaxResults(Number(event.target.value))}
               disabled={queueMode === "job"}
-              className="h-10 rounded-md border border-border bg-white px-3 text-sm font-normal outline-none focus:border-primary disabled:bg-muted"
+              className="h-10 rounded-md border border-border bg-[#0F1729] px-3 text-sm font-normal outline-none focus:border-primary disabled:bg-muted"
             />
           </label>
           <button
@@ -2248,7 +2643,7 @@ function OperatorConsolePanel({ runtime }: { runtime: RuntimeSettings }) {
             type="button"
             onClick={() => void refreshConsole()}
             disabled={loading}
-            className="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-white px-3 text-sm font-medium text-foreground disabled:opacity-60"
+            className="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-[#0F1729] px-3 text-sm font-medium text-foreground disabled:opacity-60"
           >
             <RefreshCcw className={cn("size-4", loading && "animate-spin")} aria-hidden="true" />
             Refresh
@@ -2308,7 +2703,7 @@ function OperatorHandoffList({
                   type="button"
                   disabled={!canMutate}
                   onClick={() => onResolve(handoff.id)}
-                  className="h-8 rounded-md border border-border bg-white px-3 text-xs font-semibold text-foreground disabled:opacity-50"
+                  className="h-8 rounded-md border border-border bg-[#0F1729] px-3 text-xs font-semibold text-foreground disabled:opacity-50"
                 >
                   Resolve
                 </button>
@@ -2351,7 +2746,7 @@ function OperatorQueueList({
                   type="button"
                   disabled={!canMutate || run.status === "completed"}
                   onClick={() => onProcess(run.id)}
-                  className="h-8 rounded-md border border-border bg-white px-3 text-xs font-semibold text-foreground disabled:opacity-50"
+                  className="h-8 rounded-md border border-border bg-[#0F1729] px-3 text-xs font-semibold text-foreground disabled:opacity-50"
                 >
                   Process
                 </button>
@@ -2442,7 +2837,7 @@ function LiveIntakePanel({
               onClick={() => setMode("job")}
               className={cn(
                 "rounded px-3 py-2 text-sm font-medium",
-                mode === "job" ? "bg-white text-foreground shadow-sm" : "text-muted-foreground"
+                mode === "job" ? "bg-[#0F1729] text-foreground shadow-sm" : "text-muted-foreground"
               )}
             >
               Job page
@@ -2453,7 +2848,7 @@ function LiveIntakePanel({
               onClick={() => setMode("search")}
               className={cn(
                 "rounded px-3 py-2 text-sm font-medium",
-                mode === "search" ? "bg-white text-foreground shadow-sm" : "text-muted-foreground"
+                mode === "search" ? "bg-[#0F1729] text-foreground shadow-sm" : "text-muted-foreground"
               )}
             >
               Search page
@@ -2468,7 +2863,7 @@ function LiveIntakePanel({
                 value={url}
                 onChange={(event) => setUrl(event.target.value)}
                 placeholder="https://careers.example.test/jobs/platform"
-                className="h-10 rounded-md border border-border bg-white px-3 text-sm font-normal outline-none focus:border-primary"
+                className="h-10 rounded-md border border-border bg-[#0F1729] px-3 text-sm font-normal outline-none focus:border-primary"
               />
             </label>
             <label className="grid gap-1 text-sm font-medium">
@@ -2478,7 +2873,7 @@ function LiveIntakePanel({
                 value={sourceDomain}
                 onChange={(event) => setSourceDomain(event.target.value)}
                 placeholder="careers.example.test"
-                className="h-10 rounded-md border border-border bg-white px-3 text-sm font-normal outline-none focus:border-primary"
+                className="h-10 rounded-md border border-border bg-[#0F1729] px-3 text-sm font-normal outline-none focus:border-primary"
               />
             </label>
           </div>
@@ -2491,7 +2886,7 @@ function LiveIntakePanel({
                 max={100}
                 value={maxResults}
                 onChange={(event) => setMaxResults(Number(event.target.value))}
-                className="h-10 rounded-md border border-border bg-white px-3 text-sm font-normal outline-none focus:border-primary"
+                className="h-10 rounded-md border border-border bg-[#0F1729] px-3 text-sm font-normal outline-none focus:border-primary"
               />
             </label>
           ) : null}
@@ -2524,7 +2919,7 @@ function LiveIntakePanel({
         {productionMode ? (
           <div className="mt-4 rounded-md border border-border bg-muted/40 p-3">
             <p className="text-sm font-medium text-foreground">Local command</p>
-            <pre className="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-white p-3 font-mono text-xs text-muted-foreground">
+            <pre className="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-[#0F1729] p-3 font-mono text-xs text-muted-foreground">
               {command}
             </pre>
           </div>
@@ -2749,7 +3144,9 @@ function HealthPanel({ health }: { health: ApiHealthStatus }) {
           <div
             className={cn(
               "flex size-10 shrink-0 items-center justify-center rounded-md",
-              health.state === "healthy" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"
+              health.state === "healthy"
+                ? "bg-emerald-400/10 text-emerald-200"
+                : "bg-gold-500/15 text-gold-200"
             )}
           >
             <Icon className="size-5" aria-hidden="true" />
@@ -2785,37 +3182,6 @@ function GuardrailPanel() {
   );
 }
 
-function SafeModePanel({
-  source,
-  chainValid
-}: {
-  source: SettingsSnapshot["source"];
-  chainValid: boolean;
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Safety Status</CardTitle>
-      </CardHeader>
-      <CardContent className="grid gap-3 text-sm">
-        <div className="flex min-h-10 items-center justify-between gap-3">
-          <span className="text-muted-foreground">Data source</span>
-          <Badge tone={source === "api" ? "info" : "warning"}>{formatDataSource(source)}</Badge>
-        </div>
-        <div className="flex min-h-10 items-center justify-between gap-3">
-          <span className="text-muted-foreground">Audit chain</span>
-          <Badge tone={chainValid ? "success" : "danger"}>
-            {chainValid ? "valid" : "invalid"}
-          </Badge>
-        </div>
-        <p className="text-sm leading-5 text-muted-foreground">
-          Job Search hides administrative controls while keeping guardrail status visible.
-        </p>
-      </CardContent>
-    </Card>
-  );
-}
-
 function ContextHelpPopover({
   areaLabel,
   title,
@@ -2830,7 +3196,7 @@ function ContextHelpPopover({
   return (
     <aside
       aria-label={title}
-      className="absolute right-0 top-10 z-40 w-[min(calc(100vw-2rem),390px)] rounded-md border border-border bg-white shadow-lg"
+      className="absolute right-0 top-10 z-40 w-[min(calc(100vw-2rem),390px)] rounded-md border border-border bg-[#0F1729] shadow-lg"
     >
       <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
         <div className="min-w-0">
@@ -3197,6 +3563,34 @@ function formatDataSource(source: string) {
 
 function liveJobItems(jobs: readonly JobItem[]) {
   return jobs.filter((job) => !job.synthetic);
+}
+
+function getExecutiveJobInsights(snapshot: JobCatalogSnapshot): ExecutiveJobInsight[] {
+  const mappedJobs = liveJobItems(snapshot.jobs)
+    .slice(0, 2)
+    .map((job, index) => {
+      const confidenceScore = clampPercent(Math.round(job.extractionConfidence * 100));
+      const tags = [...job.requiredSkills, ...job.preferredSkills].slice(0, 3);
+
+      return {
+        id: job.id,
+        title: job.title || "Untitled executive posting",
+        company: job.company || "Unknown company",
+        location: job.locations.length > 0 ? job.locations.join(" / ") : job.remoteType,
+        source: job.source,
+        compensation: formatSalary(job),
+        tags: tags.length > 0 ? tags : [job.employmentType ?? "executive role", job.remoteType],
+        matchScore: clampPercent(confidenceScore + 4 - index * 2),
+        confidenceScore,
+        policyScore: job.reviewStatus === "ready" ? 96 : 82
+      };
+    });
+
+  return mappedJobs;
+}
+
+function clampPercent(value: number) {
+  return Math.max(0, Math.min(100, value));
 }
 
 type PolicyCheckResult = SourcePolicyDecision & {

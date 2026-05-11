@@ -123,7 +123,17 @@ class DiscoveryQueueService:
             .order_by(DiscoveryQueueRun.created_at.asc(), DiscoveryQueueRun.id)
             .limit(limit)
         ).all()
-        processed = [self.process_run(row.id) for row in rows]
+        selected_rows: list[DiscoveryQueueRun] = []
+        selected_sources: set[str] = set()
+        for row in rows:
+            if row.source_domain in selected_sources:
+                continue
+            selected_rows.append(row)
+            selected_sources.add(row.source_domain)
+            if len(selected_rows) >= limit:
+                break
+
+        processed = [self.process_run(row.id) for row in selected_rows]
         rate_limited_count = self._session.scalar(
             select(func.count())
             .select_from(DiscoveryQueueRun)
@@ -160,7 +170,8 @@ class DiscoveryQueueService:
         if row is None:
             raise DiscoveryQueueNotFoundError(f"discovery queue run {run_id} was not found")
         now = datetime.now(UTC)
-        if row.rate_limit_after is not None and row.rate_limit_after > now:
+        rate_limit_after = _aware_datetime(row.rate_limit_after)
+        if rate_limit_after is not None and rate_limit_after > now:
             row.status = "rate_limited"
             self._session.flush()
             return _read(row)
@@ -319,6 +330,14 @@ def _source_domain(url: str, source_domain: str | None) -> str:
         return normalize_domain(source_domain)
     parsed = urlparse(url)
     return normalize_domain(parsed.hostname or "")
+
+
+def _aware_datetime(value: datetime | None) -> datetime | None:
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value
 
 
 def _read(row: DiscoveryQueueRun) -> DiscoveryQueueRunRead:
