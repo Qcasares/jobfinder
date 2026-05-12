@@ -11,6 +11,8 @@
     "test": "pnpm --filter @jobfinder/web test",
     "client:typecheck": "pnpm --filter @jobfinder/api-client typecheck",
     "client:test": "pnpm --filter @jobfinder/api-client test",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
     "api:openapi": "cd apps/api && uv run python -m app.tools.openapi_contract --check",
     "api:openapi:write": "cd apps/api && uv run python -m app.tools.openapi_contract --output ../../docs/openapi/jobfinder-openapi.json",
     "api:test": "cd apps/api && uv run pytest",
@@ -18,6 +20,9 @@
     "api:typecheck": "cd apps/api && uv run mypy app tests",
     "operator:live-intake": "node scripts/operator-live-intake.mjs",
     "production:smoke": "node scripts/production-smoke.mjs",
-    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm client:typecheck && pnpm client:test && pnpm api:lint && pnpm api:typecheck && pnpm api:openapi && pnpm api:test"
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e && pnpm client:typecheck && pnpm client:test && pnpm api:lint && pnpm api:typecheck && pnpm api:openapi && pnpm api:test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0"
   }
 }

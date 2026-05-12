@@ -92,7 +92,7 @@ The dashboard page is marked dynamic so Vercel renders it per request and reads 
 5. Deploy the API and verify `/health` and `/settings/runtime`.
 6. Create or connect the web project in Vercel with root directory `apps/web`.
 7. Set `NEXT_PUBLIC_API_BASE_URL` to the API production URL.
-8. Deploy the web project and verify the dashboard shows `API data`, the Operator Console, and the current live capability states.
+8. Deploy the web project and verify the dashboard shows the guided Job Search overview, a user-facing data status such as `Live data synced` or `Preview data loaded`, and no `API Health` wording outside Administration. Use Administration > System Status for operator diagnostics and live capability states.
 9. Use `docs/operator-runbook.md` for production live-intake commands and browser handoffs; do not place the operator key or login secret in public configuration, screenshots, logs, or docs.
 
 ## Preflight Checks

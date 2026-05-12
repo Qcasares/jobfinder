@@ -22,8 +22,12 @@ async function checkWeb() {
   assert(response.ok, `Web returned HTTP ${response.status}`);
   const html = await response.text();
   assert(html.includes("Jobfinder Operations"), "Web HTML is missing the app title.");
-  assert(html.includes("Live discovery"), "Web HTML is missing runtime capability content.");
-  assert(html.includes("Operator API key"), "Web HTML is missing operator capability content.");
+  assert(html.includes("Job Search Overview"), "Web HTML is missing the job-search overview.");
+  assert(
+    html.includes("Set up automated job search"),
+    "Web HTML is missing the guided search launchpad."
+  );
+  assert(!html.includes("API Health"), "User-facing web HTML exposes API health.");
   checks.push({ name: "web", status: response.status });
 }
 

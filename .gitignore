@@ -18,6 +18,8 @@ htmlcov/
 # Local agent/browser artifacts
 .gstack/
 .playwright-cli/
+output/playwright/
+playwright-report/
 
 # Local environment
 .env

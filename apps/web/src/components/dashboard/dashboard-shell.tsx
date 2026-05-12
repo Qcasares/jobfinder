@@ -7,6 +7,8 @@ import {
   ArrowUpRight,
   Ban,
   BarChart3,
+  Banknote,
+  Bell,
   BookOpen,
   BriefcaseBusiness,
   Building2,
@@ -30,6 +32,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Sparkles,
+  Terminal,
   Target,
   Timer,
   TrendingUp,
@@ -161,6 +164,14 @@ type ExecutiveJobInsight = {
   policyScore: number;
 };
 
+type GuidedSearchStep = {
+  title: string;
+  detail: string;
+  status: "ready" | "next" | "locked";
+  icon: typeof Gauge;
+  action: () => void;
+};
+
 type HelpContent = {
   shows: string;
   actions: string[];
@@ -169,16 +180,16 @@ type HelpContent = {
 
 const helpContent = {
   "job-overview": {
-    shows: "A user-facing summary of job matches, reviews, approvals, and application progress.",
+    shows: "A user-facing summary of job matches, review priorities, and application progress.",
     actions: [
-      "Start with reviews that need a human check.",
-      "Open Jobs to inspect matched roles.",
+      "Start with the next recommended action.",
+      "Open Jobs to inspect matched roles and confidence scores.",
       "Open Applications to see tracked application status."
     ],
     guardrails: [
-      "Review-first mode is active.",
-      "Only approved external intake records are shown in the primary workflow.",
-      "Discovery and packet preparation stay behind runtime flags, source policies, and manual review."
+      "You stay in control of every application decision.",
+      "Jobfinder can recommend and prepare, but it does not submit applications for you.",
+      "Technical source and policy details stay in Administration."
     ]
   },
   profile: {
@@ -186,12 +197,12 @@ const helpContent = {
     actions: [
       "Check that profile evidence is complete enough for review.",
       "Use job preferences to understand the current matching criteria.",
-      "Keep real CV, contact, and private candidate data out of this workspace."
+      "Connect only the profile evidence you want used for recommendations."
     ],
     guardrails: [
-      "Profile data stays disconnected until approved evidence or vault metadata is enabled.",
-      "Candidate evidence is audited when changed.",
-      "Claims must map back to approved evidence before later phases can use them."
+      "Profile data stays disconnected until you explicitly connect it.",
+      "Recommendations should be based on visible evidence.",
+      "Sensitive profile details should stay out of local sample data."
     ]
   },
   jobs: {
@@ -199,24 +210,24 @@ const helpContent = {
     actions: [
       "Scan ready jobs first.",
       "Use review status to identify jobs that need human checks.",
-      "Queue approved public source URLs from the Operator Console."
+      "Open the strongest matches and decide what to review next."
     ],
     guardrails: [
-      "Only approved source-policy intake records are shown.",
-      "Extraction confidence does not authorize automation.",
-      "Submission remains disabled."
+      "Confidence scores are decision support, not automatic approval.",
+      "Submission remains disabled until you explicitly approve a later workflow.",
+      "Source and policy diagnostics stay in Administration."
     ]
   },
   applications: {
     shows: "Read-only application tracker records and safety flags.",
     actions: [
       "Check whether an application is not started, in review, approved, or submitted.",
-      "Use safety flags to confirm no autofill or submission has happened.",
-      "Review linked approval records in Administration if needed."
+      "Use safety flags to confirm nothing has been submitted automatically.",
+      "Review the next action before progressing an application."
     ],
     guardrails: [
       "No application creation endpoint is exposed.",
-      "No autofill, browser handoff, or submit operation is available.",
+      "No autofill or submit operation is available.",
       "External side effects should remain zero in this phase."
     ]
   },
@@ -225,12 +236,12 @@ const helpContent = {
     actions: [
       "Review the reason before moving a job forward.",
       "Prioritize missing or uncertain data.",
-      "Use approval requests for operator decisions."
+      "Use review requests for decisions that need your attention."
     ],
     guardrails: [
       "Review is a stop gate, not a bypass.",
-      "Policy and evidence issues must be resolved before later automation.",
-      "CAPTCHA, access controls, and prohibited platforms stay blocked."
+      "Evidence issues must be resolved before later automation.",
+      "Blocked or uncertain items should remain blocked until reviewed."
     ]
   },
   "admin-sources": {
@@ -321,10 +332,14 @@ export function DashboardShell({
   const isAuditView = activeView === "admin-audit";
   const isSystemView = activeView === "admin-system";
   const activeAreaMeta = navigationAreas.find((area) => area.value === activeArea);
+  const jobSearchStatusSource = jobSnapshot.source;
 
   return (
     <div className="min-h-screen overflow-hidden bg-[#0A0F1D] text-foreground">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_18%_2%,rgba(201,164,76,0.18),transparent_28rem),radial-gradient(circle_at_82%_12%,rgba(99,179,237,0.12),transparent_26rem),linear-gradient(180deg,rgba(255,255,255,0.025),transparent_24rem)]" />
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden opacity-50">
+        <div className="absolute inset-x-0 top-0 h-2 bg-[linear-gradient(transparent,rgba(212,175,55,0.08),transparent)] animate-[terminal-scan_9s_linear_infinite]" />
+      </div>
       <div className="relative grid min-h-screen lg:grid-cols-[280px_1fr]">
         <motion.aside
           initial={{ opacity: 0, x: -18 }}
@@ -335,12 +350,15 @@ export function DashboardShell({
           <div className="flex h-full flex-col gap-5 px-4 py-4">
             <div className="flex items-center gap-3 rounded-card border border-gold-500/20 bg-white/[0.04] px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
               <div className="flex size-10 items-center justify-center rounded-card bg-[linear-gradient(135deg,#f8edc8,#c9a44c_48%,#8a6425)] text-[#0A0F1D] shadow-[0_0_30px_rgba(201,164,76,0.28)]">
-                <ShieldCheck className="size-5" aria-hidden="true" />
+                <Terminal className="size-5" aria-hidden="true" />
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-white">Jobfinder</p>
-                <p className="text-xs text-slate-400">Recruitment intelligence</p>
+                <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-slate-400">
+                  SYS_ID: CMD-01
+                </p>
               </div>
+              <span className="ml-auto size-1.5 rounded-full bg-gold-300 shadow-[0_0_12px_rgba(201,164,76,0.8)]" />
             </div>
 
             <div className="grid gap-2" aria-label="Workspace area">
@@ -426,9 +444,13 @@ export function DashboardShell({
               })}
             </nav>
             <div className="mt-auto hidden rounded-card border border-gold-500/20 bg-[#161D2F]/70 p-3 text-xs text-slate-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] lg:block">
-              <p className="font-medium text-white">Review-first mode</p>
+              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-gold-200">
+                AUTH USER
+              </p>
+              <p className="mt-3 font-medium text-white">Review-first mode</p>
               <p className="mt-1 leading-5">
-                Governed live intake can be enabled; browser automation and submission stay blocked.
+                Searches can recommend and prepare next steps; applications are never submitted
+                without your approval.
               </p>
             </div>
           </div>
@@ -442,7 +464,7 @@ export function DashboardShell({
             className="sticky top-0 z-10 border-b border-gold-500/15 bg-[#0A0F1D]/72 px-4 py-4 shadow-[0_18px_70px_rgba(0,0,0,0.28)] backdrop-blur-2xl sm:px-6"
           >
             <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(201,164,76,0.09),transparent_34%,rgba(99,179,237,0.08))]" />
-            <div className="relative flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="relative grid gap-3 lg:grid-cols-[minmax(190px,auto)_minmax(260px,560px)_auto] lg:items-center">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gold-200/70">
                   {viewEyebrow(activeView)}
@@ -451,6 +473,7 @@ export function DashboardShell({
                   {viewTitle(activeView)}
                 </h1>
               </div>
+              <ExecutiveCommandBar />
               <div className="relative flex flex-wrap items-center gap-2">
                 <button
                   type="button"
@@ -483,7 +506,18 @@ export function DashboardShell({
                     </Badge>
                   </>
                 ) : null}
-                <ApiHealthBadge health={health} />
+                {activeArea === "administration" ? (
+                  <ApiHealthBadge health={health} />
+                ) : (
+                  <UserDataStatusBadge health={health} source={jobSearchStatusSource} />
+                )}
+                <button
+                  type="button"
+                  aria-label="Notifications"
+                  className="inline-flex size-9 items-center justify-center rounded-card border border-gold-500/20 bg-white/[0.05] text-slate-300 transition-colors hover:border-gold-500/35 hover:text-gold-100"
+                >
+                  <Bell className="size-4" aria-hidden="true" />
+                </button>
               </div>
             </div>
           </motion.header>
@@ -491,17 +525,16 @@ export function DashboardShell({
           {isSourcesView ? (
             <SourcesWorkspace policies={dashboardData.sourcePolicies} health={health} />
           ) : isProfileView ? (
-            <CandidateWorkspace snapshot={candidateSnapshot} health={health} />
+            <CandidateWorkspace snapshot={candidateSnapshot} />
           ) : isJobsView ? (
-            <JobsWorkspace snapshot={jobSnapshot} health={health} />
+            <JobsWorkspace snapshot={jobSnapshot} />
           ) : isReviewView ? (
             <ReviewWorkspace
               reviewSnapshot={reviewSnapshot}
               approvalSnapshot={approvalSnapshot}
-              health={health}
             />
           ) : isApplicationsView ? (
-            <ApplicationsWorkspace snapshot={applicationSnapshot} health={health} />
+            <ApplicationsWorkspace snapshot={applicationSnapshot} />
           ) : isApprovalsView ? (
             <ApprovalsWorkspace
               reviewSnapshot={reviewSnapshot}
@@ -526,9 +559,56 @@ export function DashboardShell({
               applicationSnapshot={applicationSnapshot}
               auditSnapshot={auditSnapshot}
               settingsSnapshot={settingsSnapshot}
+              onSetupSearch={() => {
+                setActiveArea("job-search");
+                setActiveView("profile");
+              }}
+              onOpenRecommendations={() => {
+                setActiveArea("job-search");
+                setActiveView("jobs");
+              }}
+              onOpenReviews={() => {
+                setActiveArea("job-search");
+                setActiveView("reviews-needed");
+              }}
             />
           )}
         </main>
+      </div>
+    </div>
+  );
+}
+
+function ExecutiveCommandBar() {
+  return (
+    <div className="hidden min-w-0 items-center gap-3 lg:flex">
+      <div className="relative min-w-0 flex-1">
+        <Search
+          className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gold-200/60"
+          aria-hidden="true"
+        />
+        <div className="h-10 rounded-card border border-gold-500/20 bg-[#0A0F1D]/75 pl-10 pr-20 font-mono text-xs uppercase tracking-[0.1em] text-slate-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+          <div className="flex h-full items-center truncate">QUERY INTELLIGENCE DB...</div>
+        </div>
+        <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
+          <span className="rounded border border-gold-500/30 bg-gold-500/10 px-1.5 py-0.5 font-mono text-[9px] text-gold-100">
+            ⌘
+          </span>
+          <span className="rounded border border-gold-500/30 bg-gold-500/10 px-1.5 py-0.5 font-mono text-[9px] text-gold-100">
+            K
+          </span>
+        </div>
+      </div>
+      <div className="flex h-10 shrink-0 items-center gap-3 rounded-card border border-gold-500/20 bg-[#0A0F1D]/75 px-3">
+        <div className="grid leading-none">
+          <span className="font-mono text-[8px] uppercase tracking-[0.12em] text-slate-500">
+            SYS_STAT
+          </span>
+          <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-gold-100">
+            NOMINAL
+          </span>
+        </div>
+        <span className="size-2 rounded-full bg-gold-300 shadow-[0_0_12px_rgba(201,164,76,0.75)]" />
       </div>
     </div>
   );
@@ -542,7 +622,10 @@ function JobSearchOverview({
   approvalSnapshot,
   applicationSnapshot,
   auditSnapshot,
-  settingsSnapshot
+  settingsSnapshot,
+  onSetupSearch,
+  onOpenRecommendations,
+  onOpenReviews
 }: {
   health: ApiHealthStatus;
   candidateSnapshot: CandidateWorkspaceSnapshot;
@@ -552,6 +635,9 @@ function JobSearchOverview({
   applicationSnapshot: ApplicationSnapshot;
   auditSnapshot: AuditSnapshot;
   settingsSnapshot: SettingsSnapshot;
+  onSetupSearch: () => void;
+  onOpenRecommendations: () => void;
+  onOpenReviews: () => void;
 }) {
   const executiveJobs = getExecutiveJobInsights(jobSnapshot);
   const liveReviewCount = reviewSnapshot.items.filter((item) => !item.synthetic).length;
@@ -600,6 +686,14 @@ function JobSearchOverview({
             pipelineMatch={pipelineMatch}
             source={jobSnapshot.source}
           />
+          <GuidedSearchLaunchpad
+            hasProfileEvidence={candidateSnapshot.evidence.some((item) => !item.synthetic)}
+            hasRecommendations={executiveJobs.length > 0}
+            hasReviews={liveReviewCount > 0}
+            onSetupSearch={onSetupSearch}
+            onOpenRecommendations={onOpenRecommendations}
+            onOpenReviews={onOpenReviews}
+          />
           <section
             aria-label="Job Search Overview"
             className="grid auto-rows-[minmax(148px,auto)] gap-4 md:grid-cols-2 xl:grid-cols-4"
@@ -622,9 +716,14 @@ function JobSearchOverview({
             />
           </section>
           <ExecutiveJobList jobs={executiveJobs} />
+          <StrategicRequisitions />
         </div>
         <section className="grid content-start gap-4">
-          <PremiumOperationsCard health={health} approvalSnapshot={approvalSnapshot} />
+          <PremiumOperationsCard
+            health={health}
+            approvalSnapshot={approvalSnapshot}
+            source={jobSnapshot.source}
+          />
           <ExecutiveReviewCard items={reviewSnapshot.buckets} />
           <ExecutiveSafetyCard
             source={settingsSnapshot.source}
@@ -668,8 +767,8 @@ function ExecutiveHero({
             Job Search Overview
           </h2>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-            Executive-grade role intelligence, confidence scoring, source posture, and approval
-            flow in one governed command surface.
+            Executive-grade role recommendations, confidence scoring, shortlist review, and
+            application progress in one focused command surface.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <span className="inline-flex min-h-10 items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-4 text-sm text-slate-200">
@@ -678,7 +777,7 @@ function ExecutiveHero({
             </span>
             <span className="inline-flex min-h-10 items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-4 text-sm text-slate-200">
               <Network className="size-4 text-cyan-100" aria-hidden="true" />
-              Source-gated intake
+              Review-first control
             </span>
           </div>
         </div>
@@ -687,7 +786,7 @@ function ExecutiveHero({
             <span className="text-xs uppercase tracking-[0.12em] text-slate-400">
               Market pulse
             </span>
-            <ApiHealthBadge health={health} compact />
+            <UserDataStatusBadge health={health} source={source} compact />
           </div>
           <div className="mt-8">
             <p className="font-[var(--font-serif-numeral)] text-5xl text-gold-100">
@@ -700,6 +799,130 @@ function ExecutiveHero({
         </div>
       </CardContent>
     </PremiumCard>
+  );
+}
+
+function GuidedSearchLaunchpad({
+  hasProfileEvidence,
+  hasRecommendations,
+  hasReviews,
+  onSetupSearch,
+  onOpenRecommendations,
+  onOpenReviews
+}: {
+  hasProfileEvidence: boolean;
+  hasRecommendations: boolean;
+  hasReviews: boolean;
+  onSetupSearch: () => void;
+  onOpenRecommendations: () => void;
+  onOpenReviews: () => void;
+}) {
+  const steps = [
+    {
+      title: "Set search criteria",
+      detail: "Role, location, salary, seniority, and safe source scope",
+      status: hasProfileEvidence ? "ready" : "next",
+      icon: Search,
+      action: onSetupSearch
+    },
+    {
+      title: "Get recommendations",
+      detail: "Jobfinder ranks matches and explains confidence before action",
+      status: hasRecommendations ? "ready" : hasProfileEvidence ? "next" : "locked",
+      icon: Sparkles,
+      action: onOpenRecommendations
+    },
+    {
+      title: "Review shortlist",
+      detail: "Approve, reject, or request changes while keeping decisions traceable",
+      status: hasReviews ? "next" : hasRecommendations ? "next" : "locked",
+      icon: ClipboardCheck,
+      action: onOpenReviews
+    }
+  ] satisfies GuidedSearchStep[];
+
+  return (
+    <PremiumCard>
+      <CardContent className="relative grid gap-5 p-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(360px,1.1fr)]">
+        <div>
+          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-gold-200">
+            Start here
+          </p>
+          <h2 className="mt-3 text-2xl font-semibold text-white">
+            Set up automated job search in three steps
+          </h2>
+          <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300">
+            Keep the terminal detail available for confidence and audit, but make the main workflow
+            simple: configure the search, inspect recommendations, then review the shortlist.
+          </p>
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <SearchSetupField label="Target role" value="Executive leadership" />
+            <SearchSetupField label="Market" value="London + remote" />
+            <SearchSetupField label="Cadence" value="Daily review" />
+          </div>
+          <button
+            type="button"
+            onClick={onSetupSearch}
+            className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-card bg-[linear-gradient(135deg,#f8edc8,#c9a44c_48%,#9c7428)] px-5 text-sm font-bold text-[#0A0F1D] shadow-[0_0_28px_rgba(201,164,76,0.22)] transition-shadow hover:shadow-[0_0_42px_rgba(201,164,76,0.38)]"
+          >
+            Set up automated search
+            <ArrowUpRight className="size-4" aria-hidden="true" />
+          </button>
+        </div>
+        <div className="grid gap-3">
+          {steps.map((step, index) => (
+            <GuidedStepRow key={step.title} step={step} index={index + 1} />
+          ))}
+        </div>
+      </CardContent>
+    </PremiumCard>
+  );
+}
+
+function SearchSetupField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-card border border-gold-500/20 bg-[#0A0F1D]/70 px-3 py-3">
+      <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-slate-500">{label}</p>
+      <p className="mt-1 text-sm font-medium text-white">{value}</p>
+    </div>
+  );
+}
+
+function GuidedStepRow({ step, index }: { step: GuidedSearchStep; index: number }) {
+  const Icon = step.icon;
+  const statusLabel =
+    step.status === "ready" ? "Complete" : step.status === "next" ? "Next action" : "Locked";
+
+  return (
+    <button
+      type="button"
+      onClick={step.action}
+      disabled={step.status === "locked"}
+      className={cn(
+        "grid min-h-20 grid-cols-[auto_1fr_auto] items-center gap-4 rounded-card border px-4 py-3 text-left transition duration-300",
+        step.status === "next"
+          ? "border-gold-500/40 bg-gold-500/12 shadow-[0_0_28px_rgba(201,164,76,0.1)] hover:-translate-y-0.5 hover:shadow-[0_0_34px_rgba(201,164,76,0.18)]"
+          : "border-white/10 bg-white/[0.035] enabled:hover:border-gold-500/25 enabled:hover:bg-white/[0.055]",
+        step.status === "locked" ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+      )}
+    >
+      <span className="grid size-10 place-items-center rounded-card border border-gold-500/25 bg-[#0A0F1D]/70 text-gold-100">
+        <Icon className="size-4" aria-hidden="true" />
+      </span>
+      <div className="min-w-0">
+        <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-gold-200/70">
+          Step {index}
+        </p>
+        <p className="mt-1 text-sm font-semibold text-white">{step.title}</p>
+        <p className="mt-1 text-xs leading-5 text-slate-400">{step.detail}</p>
+      </div>
+      <Badge
+        tone={step.status === "ready" ? "success" : step.status === "next" ? "warning" : "neutral"}
+        className="whitespace-nowrap"
+      >
+        {statusLabel}
+      </Badge>
+    </button>
   );
 }
 
@@ -817,13 +1040,17 @@ function IntelligenceSignalsCard({
   settingsSnapshot: SettingsSnapshot;
 }) {
   const evidenceCount = candidateSnapshot.evidence.filter((item) => !item.synthetic).length;
-  const enabledCapabilities = settingsSnapshot.runtime.capabilities.filter(
+  const safetyControls = settingsSnapshot.runtime.capabilities.filter(
     (capability) => capability.enabled
   ).length;
   const rows = [
-    { label: "Evidence nodes", value: evidenceCount, icon: CircleDot },
-    { label: "Audit chain", value: auditSnapshot.summary.chainValid ? "valid" : "review", icon: ShieldCheck },
-    { label: "Runtime gates", value: enabledCapabilities, icon: ServerCog }
+    { label: "Profile evidence", value: evidenceCount, icon: CircleDot },
+    {
+      label: "Decision history",
+      value: auditSnapshot.summary.chainValid ? "tracked" : "review",
+      icon: ShieldCheck
+    },
+    { label: "Safety controls", value: safetyControls, icon: ServerCog }
   ];
 
   return (
@@ -875,6 +1102,171 @@ function ExecutiveJobList({ jobs }: { jobs: readonly ExecutiveJobInsight[] }) {
         ))}
       </CardContent>
     </PremiumCard>
+  );
+}
+
+function StrategicRequisitions() {
+  const requisitions = [
+    {
+      id: "C-TECH-01",
+      title: "Chief Technology Officer",
+      location: "LON_UK",
+      compensation: "320-450K",
+      aiConfidence: 92,
+      marketFit: 64,
+      status: "URGENT_FILL",
+      urgent: true,
+      icon: Banknote
+    },
+    {
+      id: "V-PORT-02",
+      title: "VP Portfolio Strategy",
+      location: "NYC_US",
+      compensation: "280-340K",
+      aiConfidence: 88,
+      marketFit: 42,
+      status: "PIPELINE_ONLY",
+      urgent: false,
+      icon: TrendingUp
+    }
+  ];
+
+  return (
+    <section className="grid gap-4">
+      <div className="flex flex-col gap-3 border-b border-gold-500/20 pb-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="font-mono text-xs uppercase tracking-[0.24em] text-gold-200">
+            Strategic Requisitions
+          </h2>
+          <span className="border border-gold-500/30 bg-gold-500/10 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.1em] text-gold-100">
+            DATA_VIEW: SPLIT
+          </span>
+        </div>
+        <div className="flex gap-2">
+          <span className="border border-gold-500/30 bg-gold-500/15 px-3 py-1 font-mono text-[10px] text-gold-100">
+            LIST
+          </span>
+          <span className="border border-white/10 bg-[#0A0F1D]/70 px-3 py-1 font-mono text-[10px] text-slate-400">
+            GRID
+          </span>
+        </div>
+      </div>
+      <div className="grid gap-4 xl:grid-cols-2">
+        {requisitions.map((requisition) => (
+          <StrategicRequisitionCard key={requisition.id} requisition={requisition} />
+        ))}
+      </div>
+      <PremiumCard className="opacity-85 transition-opacity hover:opacity-100">
+        <CardContent className="relative grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center">
+          <div className="flex min-w-0 items-center gap-4">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-card border border-gold-500/30 bg-[#0A0F1D]/70 text-gold-100">
+              <ShieldCheck className="size-5" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-3">
+                <h3 className="text-base font-semibold text-white">Head of Regulatory Risk</h3>
+                <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-gold-200/60">
+                  REQ: H-RISK-03
+                </span>
+              </div>
+              <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.08em] text-slate-400">
+                SGP / 250-290K / INTERNAL
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <InlineScore label="AI_CONF" value={75} tone="gold" />
+            <InlineScore label="MKT_FIT" value={82} tone="silver" />
+          </div>
+          <button
+            type="button"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-card border border-gold-500/50 px-4 font-mono text-[10px] uppercase tracking-[0.16em] text-gold-100 transition-colors hover:bg-gold-500/10"
+          >
+            <ArrowUpRight className="size-4" aria-hidden="true" />
+            Review
+          </button>
+        </CardContent>
+      </PremiumCard>
+    </section>
+  );
+}
+
+function StrategicRequisitionCard({
+  requisition
+}: {
+  requisition: {
+    id: string;
+    title: string;
+    location: string;
+    compensation: string;
+    aiConfidence: number;
+    marketFit: number;
+    status: string;
+    urgent: boolean;
+    icon: typeof Gauge;
+  };
+}) {
+  const Icon = requisition.icon;
+
+  return (
+    <motion.article
+      whileHover={{ y: -4, scale: 1.01 }}
+      whileTap={{ scale: 0.995 }}
+      className="cursor-pointer"
+    >
+      <PremiumCard>
+        <CardContent className="relative grid gap-5 p-5">
+          <div className="absolute right-3 top-3">
+            <span
+              className={cn(
+                "block size-2 rounded-full",
+                requisition.urgent
+                  ? "animate-pulse bg-red-300 shadow-[0_0_14px_rgba(252,165,165,0.75)]"
+                  : "bg-gold-300 shadow-[0_0_14px_rgba(201,164,76,0.7)]"
+              )}
+            />
+          </div>
+          <div className="flex gap-4 border-b border-gold-500/10 pb-4">
+            <span className="flex size-12 shrink-0 items-center justify-center rounded-card border border-gold-500/30 bg-gold-500/10 text-gold-100">
+              <Icon className="size-6" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <p className="font-mono text-[9px] uppercase tracking-[0.12em] text-gold-200/70">
+                REQ_ID: {requisition.id}
+              </p>
+              <h3 className="mt-1 text-lg font-semibold leading-tight text-white">
+                {requisition.title}
+              </h3>
+              <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.08em] text-slate-400">
+                {requisition.location} / {requisition.compensation}
+              </p>
+            </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <ScoreBlock label="AI_CONFIDENCE" value={requisition.aiConfidence} tone="gold" />
+            <ScoreBlock label="MARKET_FIT" value={requisition.marketFit} tone="silver" />
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <span
+              className={cn(
+                "w-fit border px-2 py-1 font-mono text-[9px] uppercase tracking-[0.16em]",
+                requisition.urgent
+                  ? "border-red-300/30 bg-red-400/10 text-red-200"
+                  : "border-gold-500/30 bg-gold-500/10 text-gold-100"
+              )}
+            >
+              {requisition.status}
+            </span>
+            <button
+              type="button"
+              className="inline-flex h-10 items-center justify-center rounded-card border border-gold-500 bg-gold-500/10 px-5 font-mono text-[10px] uppercase tracking-[0.18em] text-gold-100 transition-colors hover:bg-gold-500 hover:text-[#0A0F1D]"
+            >
+              Execute Review
+            </button>
+          </div>
+        </CardContent>
+      </PremiumCard>
+    </motion.article>
   );
 }
 
@@ -1000,32 +1392,106 @@ function ConfidenceRing({ label, value }: { label: string; value: number }) {
   );
 }
 
+function ScoreBlock({
+  label,
+  value,
+  tone
+}: {
+  label: string;
+  value: number;
+  tone: "gold" | "silver";
+}) {
+  return (
+    <div className="grid gap-2 rounded-card border border-gold-500/20 bg-[#0A0F1D]/72 p-3 text-center">
+      <p
+        className={cn(
+          "font-mono text-3xl",
+          tone === "gold" ? "text-gold-100" : "text-slate-300"
+        )}
+      >
+        {value}<span className="text-base">%</span>
+      </p>
+      <p className="font-mono text-[8px] uppercase tracking-[0.12em] text-slate-400">
+        {label}
+      </p>
+      <div
+        className={cn(
+          "h-1 bg-white/10",
+          tone === "gold" ? "[--score:#c9a44c]" : "[--score:#bfc6de]"
+        )}
+      >
+        <div
+          className="h-full bg-[var(--score)]"
+          style={{ width: `${clampPercent(value)}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function InlineScore({
+  label,
+  value,
+  tone
+}: {
+  label: string;
+  value: number;
+  tone: "gold" | "silver";
+}) {
+  return (
+    <div className="min-w-24">
+      <p className="font-mono text-[8px] uppercase tracking-[0.12em] text-slate-400">{label}</p>
+      <div className="mt-1 flex items-center gap-2">
+        <span
+          className={cn(
+            "font-mono text-sm",
+            tone === "gold" ? "text-gold-100" : "text-slate-300"
+          )}
+        >
+          {value}%
+        </span>
+        <span className="h-1 w-16 bg-white/10">
+          <span
+            className={cn(
+              "block h-full",
+              tone === "gold" ? "bg-gold-400" : "bg-slate-300"
+            )}
+            style={{ width: `${clampPercent(value)}%` }}
+          />
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function PremiumOperationsCard({
   health,
-  approvalSnapshot
+  approvalSnapshot,
+  source
 }: {
   health: ApiHealthStatus;
   approvalSnapshot: ApprovalSnapshot;
+  source: JobCatalogSnapshot["source"];
 }) {
   return (
     <PremiumCard>
       <CardHeader className="relative border-gold-500/15">
-        <CardTitle className="text-white">Executive Header Signals</CardTitle>
+        <CardTitle className="text-white">Search Readiness</CardTitle>
       </CardHeader>
       <CardContent className="relative grid gap-3 p-4">
         <div className="flex min-h-14 items-center justify-between gap-4 rounded-card border border-white/10 bg-white/[0.04] px-4">
-          <span className="text-sm text-slate-300">API Health</span>
-          <ApiHealthBadge health={health} compact />
+          <span className="text-sm text-slate-300">Search data</span>
+          <UserDataStatusBadge health={health} source={source} compact />
         </div>
         <div className="flex min-h-14 items-center justify-between gap-4 rounded-card border border-white/10 bg-white/[0.04] px-4">
-          <span className="text-sm text-slate-300">Pending approvals</span>
+          <span className="text-sm text-slate-300">Items to review</span>
           <span className="font-[var(--font-serif-numeral)] text-3xl text-gold-100">
             {approvalSnapshot.summary.pending}
           </span>
         </div>
         <div className="flex min-h-14 items-center justify-between gap-4 rounded-card border border-white/10 bg-white/[0.04] px-4">
-          <span className="text-sm text-slate-300">Safety flags</span>
-          <Badge tone="success">zero external side effects</Badge>
+          <span className="text-sm text-slate-300">Automation safety</span>
+          <Badge tone="success">no auto-apply</Badge>
         </div>
       </CardContent>
     </PremiumCard>
@@ -1036,7 +1502,7 @@ function ExecutiveReviewCard({ items }: { items: readonly ReviewQueueBucket[] })
   return (
     <PremiumCard>
       <CardHeader className="relative border-gold-500/15">
-        <CardTitle className="text-white">Review Risk</CardTitle>
+        <CardTitle className="text-white">Shortlist Review</CardTitle>
       </CardHeader>
       <CardContent className="relative grid gap-3 p-4">
         {items.slice(0, 4).map((item) => (
@@ -1046,7 +1512,7 @@ function ExecutiveReviewCard({ items }: { items: readonly ReviewQueueBucket[] })
           >
             <div className="min-w-0">
               <p className="truncate text-sm text-white">{item.label}</p>
-              <p className="text-xs text-slate-400">approval gate</p>
+              <p className="text-xs text-slate-400">needs attention</p>
             </div>
             <div className="flex items-center gap-2">
               <Badge tone={riskTone(item.risk)}>{item.risk}</Badge>
@@ -1073,14 +1539,14 @@ function ExecutiveSafetyCard({
   return (
     <PremiumCard>
       <CardHeader className="relative border-gold-500/15">
-        <CardTitle className="text-white">Governance Layer</CardTitle>
+        <CardTitle className="text-white">Trust Controls</CardTitle>
       </CardHeader>
       <CardContent className="relative grid gap-3 p-4">
         {[
-          { label: "Data source", value: formatDataSource(source), icon: DatabaseZap },
-          { label: "Audit chain", value: chainValid ? "valid" : "invalid", icon: Activity },
+          { label: "Job data", value: formatDataSource(source), icon: DatabaseZap },
+          { label: "Decision history", value: chainValid ? "tracked" : "review", icon: Activity },
           {
-            label: "Runtime gates",
+            label: "Automation limits",
             value: String(settingsSnapshot.runtime.capabilities.length),
             icon: Timer
           }
@@ -1111,14 +1577,53 @@ function PremiumCard({
   return (
     <Card
       className={cn(
-        "relative overflow-hidden border-gold-500/20 bg-[#161D2F]/88 text-white shadow-[0_22px_80px_rgba(0,0,0,0.34)] backdrop-blur-xl",
+        "relative overflow-hidden rounded-card border-gold-500/20 bg-[#161D2F]/88 text-white shadow-[0_22px_80px_rgba(0,0,0,0.34)] backdrop-blur-xl transition-colors hover:border-gold-500/40 hover:shadow-[0_0_30px_rgba(212,175,55,0.06)]",
         "before:pointer-events-none before:absolute before:inset-0 before:bg-[linear-gradient(135deg,rgba(248,237,200,0.08),transparent_28%,rgba(255,255,255,0.025)_58%,transparent)]",
         "after:pointer-events-none after:absolute after:inset-px after:rounded-[7px] after:border after:border-white/[0.045]",
         className
       )}
     >
+      <span className="pointer-events-none absolute left-0 top-0 z-[1] size-2 border-l border-t border-gold-500/55" />
+      <span className="pointer-events-none absolute bottom-0 right-0 z-[1] size-2 border-b border-r border-gold-500/55" />
       {children}
     </Card>
+  );
+}
+
+function UserDataStatusBadge({
+  health,
+  source,
+  compact = false
+}: {
+  health: ApiHealthStatus;
+  source: JobCatalogSnapshot["source"];
+  compact?: boolean;
+}) {
+  const isLive = health.state === "healthy" && source === "api";
+  const isDelayed = health.state === "unreachable";
+  const label = isLive
+    ? "Live data synced"
+    : isDelayed
+      ? "Results may be delayed"
+      : "Preview data loaded";
+  const detail = isLive ? "Updated now" : isDelayed ? "Using saved results" : "Ready to explore";
+
+  return (
+    <Badge
+      tone={isDelayed ? "warning" : "neutral"}
+      className={cn(
+        "relative gap-2 border-gold-500/35 bg-gold-500/20 text-gold-100 shadow-[0_0_28px_rgba(201,164,76,0.18)]",
+        compact ? "px-2.5" : "px-3 py-1"
+      )}
+    >
+      <span className="relative flex size-2.5">
+        {isLive ? (
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-gold-500 opacity-70" />
+        ) : null}
+        <span className="relative inline-flex size-2.5 rounded-full bg-gold-300 shadow-[0_0_12px_rgba(201,164,76,0.8)]" />
+      </span>
+      {compact ? label : `${label} · ${detail}`}
+    </Badge>
   );
 }
 
@@ -1149,13 +1654,7 @@ function ApiHealthBadge({
   );
 }
 
-function CandidateWorkspace({
-  snapshot,
-  health
-}: {
-  snapshot: CandidateWorkspaceSnapshot;
-  health: ApiHealthStatus;
-}) {
+function CandidateWorkspace({ snapshot }: { snapshot: CandidateWorkspaceSnapshot }) {
   return (
     <div className="grid gap-4 p-4 sm:p-6 xl:grid-cols-[1.5fr_1fr]">
       <section className="grid gap-4">
@@ -1165,7 +1664,6 @@ function CandidateWorkspace({
       <section className="grid content-start gap-4">
         <CandidateCriteriaPanel criteria={snapshot.searchCriteria} />
         <CandidateSafetyPanel snapshot={snapshot} />
-        <HealthPanel health={health} />
       </section>
     </div>
   );
@@ -1179,7 +1677,7 @@ function CandidateProfilePanel({ snapshot }: { snapshot: CandidateWorkspaceSnaps
   const displaySummary =
     profileConnected && snapshot.profile.summary
       ? snapshot.profile.summary
-      : "Connect approved profile evidence or encrypted candidate vault metadata before using profile data for matching.";
+      : "Connect the profile evidence you want Jobfinder to use before recommendations are personalized.";
 
   return (
     <Card>
@@ -1225,10 +1723,9 @@ function CandidateEvidencePanel({ evidence }: { evidence: readonly CandidateEvid
       <CardContent className="grid gap-3">
         {liveEvidence.length === 0 ? (
           <div className="rounded-md border border-border bg-muted/40 px-3 py-4">
-            <p className="text-sm font-medium">No approved profile evidence connected.</p>
+            <p className="text-sm font-medium">No profile evidence connected yet.</p>
             <p className="mt-2 text-sm leading-5 text-muted-foreground">
-              Add evidence through the governed candidate vault flow before using profile data for
-              matching or drafting.
+              Add the experience, skills, and preferences you want used for matching.
             </p>
           </div>
         ) : (
@@ -1266,10 +1763,10 @@ function CandidateCriteriaPanel({ criteria }: { criteria: readonly SearchCriteri
       <CardContent className="grid gap-3">
         {liveCriteria.length === 0 ? (
           <div className="rounded-md border border-border bg-muted/40 px-3 py-4">
-            <p className="text-sm font-medium">No live search preferences configured.</p>
+            <p className="text-sm font-medium">No search preferences configured yet.</p>
             <p className="mt-2 text-sm leading-5 text-muted-foreground">
-              Use Administration to queue approved job-board URLs while profile preferences are
-              being connected.
+              Add target roles, locations, seniority, and salary range before using automated
+              recommendations.
             </p>
           </div>
         ) : (
@@ -1295,12 +1792,11 @@ function CandidateSafetyPanel({ snapshot }: { snapshot: CandidateWorkspaceSnapsh
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Profile Data Safety</CardTitle>
+        <CardTitle>Profile Control</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-3">
         <p className="text-sm leading-5 text-muted-foreground">
-          Candidate profile data is only used after it is explicitly connected through approved
-          evidence or candidate vault metadata.
+          Your profile is only used for recommendations after you explicitly connect it.
         </p>
         {snapshot.checkedUrl ? (
           <p className="break-words rounded-md bg-muted px-3 py-2 font-mono text-xs text-muted-foreground">
@@ -1312,13 +1808,7 @@ function CandidateSafetyPanel({ snapshot }: { snapshot: CandidateWorkspaceSnapsh
   );
 }
 
-function JobsWorkspace({
-  snapshot,
-  health
-}: {
-  snapshot: JobCatalogSnapshot;
-  health: ApiHealthStatus;
-}) {
+function JobsWorkspace({ snapshot }: { snapshot: JobCatalogSnapshot }) {
   const liveJobs = liveJobItems(snapshot.jobs);
   return (
     <div className="grid gap-4 p-4 sm:p-6 xl:grid-cols-[1.55fr_0.95fr]">
@@ -1327,20 +1817,13 @@ function JobsWorkspace({
       </section>
       <section className="grid content-start gap-4">
         <JobSummaryPanel snapshot={snapshot} />
-        <HealthPanel health={health} />
         <GuardrailPanel />
       </section>
     </div>
   );
 }
 
-function ApplicationsWorkspace({
-  snapshot,
-  health
-}: {
-  snapshot: ApplicationSnapshot;
-  health: ApiHealthStatus;
-}) {
+function ApplicationsWorkspace({ snapshot }: { snapshot: ApplicationSnapshot }) {
   return (
     <div className="grid gap-4 p-4 sm:p-6 xl:grid-cols-[1.55fr_0.95fr]">
       <section className="grid gap-4">
@@ -1348,7 +1831,6 @@ function ApplicationsWorkspace({
       </section>
       <section className="grid content-start gap-4">
         <ApplicationSummaryPanel snapshot={snapshot} />
-        <HealthPanel health={health} />
         <GuardrailPanel />
       </section>
     </div>
@@ -1428,12 +1910,10 @@ function AuditWorkspace({
 
 function ReviewWorkspace({
   reviewSnapshot,
-  approvalSnapshot,
-  health
+  approvalSnapshot
 }: {
   reviewSnapshot: ReviewQueueSnapshot;
   approvalSnapshot: ApprovalSnapshot;
-  health: ApiHealthStatus;
 }) {
   const liveReviewItems = reviewSnapshot.items.filter((item) => !item.synthetic);
 
@@ -1446,7 +1926,6 @@ function ReviewWorkspace({
         <ReviewSummaryPanel snapshot={reviewSnapshot} />
         <ApprovalRequestsPanel snapshot={approvalSnapshot} />
         <ReviewQueuePanel items={reviewSnapshot.buckets} />
-        <HealthPanel health={health} />
       </section>
     </div>
   );
@@ -2256,8 +2735,8 @@ function JobCatalogTable({ jobs }: { jobs: readonly JobItem[] }) {
           <div className="grid gap-3 px-4 py-8">
             <p className="text-sm font-medium">No live jobs imported yet.</p>
             <p className="max-w-2xl text-sm leading-5 text-muted-foreground">
-              Queue approved source URLs from the Operator Console. Jobfinder will stop at manual
-              handoff if a page presents login, CAPTCHA, bot detection, or access controls.
+              Set up search preferences and connect profile evidence to start receiving matched
+              roles.
             </p>
           </div>
         ) : (
@@ -2329,8 +2808,8 @@ function ApplicationTable({ applications }: { applications: readonly Application
           <div className="grid gap-3 px-4 py-8">
             <p className="text-sm font-medium">No application records have been created.</p>
             <p className="max-w-2xl text-sm leading-5 text-muted-foreground">
-              This workspace is read-only for now: no drafting packet, autofill, browser handoff,
-              or submit operation is available.
+              Applications will appear here after you choose roles to review. Nothing is submitted
+              automatically.
             </p>
           </div>
         ) : (
@@ -3063,8 +3542,7 @@ function ReviewQueueTable({ items }: { items: readonly ReviewJobItem[] }) {
           <div className="grid gap-2 px-4 py-8 text-sm text-muted-foreground">
             <p className="font-medium text-foreground">No live reviews are waiting.</p>
             <p>
-              Queue approved source URLs in the Operator Console; records that need human review
-              will appear here after extraction.
+              Recommendations that need your decision will appear here after matching.
             </p>
           </div>
         ) : (
@@ -3174,9 +3652,9 @@ function GuardrailPanel() {
         <CardTitle>Active Guardrails</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-3 text-sm">
-        <GuardrailRow icon={LockKeyhole} label="No submission without approval" />
-        <GuardrailRow icon={ShieldCheck} label="Generated claims require evidence mapping" />
-        <GuardrailRow icon={Activity} label="Every material decision emits an audit event" />
+        <GuardrailRow icon={LockKeyhole} label="No application is submitted without approval" />
+        <GuardrailRow icon={ShieldCheck} label="Recommendations must be backed by evidence" />
+        <GuardrailRow icon={Activity} label="Important decisions stay traceable" />
       </CardContent>
     </Card>
   );
@@ -3235,8 +3713,8 @@ function ContextHelpPopover({
           ordered={false}
         />
         <div className="rounded-md border border-border bg-muted/50 px-3 py-3 text-xs leading-5 text-muted-foreground">
-          Live intake and packet preparation require explicit runtime flags and source policies.
-          Browser execution, credential capture, and external submissions remain blocked.
+          Automation setup is controlled in Administration. Credential capture and external
+          submissions remain blocked.
         </div>
       </div>
     </aside>
@@ -3551,11 +4029,11 @@ function formatTimestamp(value: string) {
 
 function formatDataSource(source: string) {
   if (source === "api") {
-    return "API data";
+    return "Live data";
   }
 
   if (source === "local") {
-    return "Local fallback";
+    return "Preview data";
   }
 
   return source;

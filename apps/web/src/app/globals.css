@@ -50,9 +50,12 @@ html {
 body {
   margin: 0;
   background:
+    linear-gradient(rgba(212, 175, 55, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(212, 175, 55, 0.028) 1px, transparent 1px),
     radial-gradient(circle at 18% -12%, rgba(201, 164, 76, 0.2), transparent 34rem),
     radial-gradient(circle at 90% 8%, rgba(70, 122, 180, 0.16), transparent 28rem),
     var(--background);
+  background-size: 42px 42px, 42px 42px, auto, auto, auto;
   color: var(--foreground);
   font-family: var(--font-sans);
 }
@@ -76,5 +79,15 @@ a {
   100% {
     opacity: 0.15;
     transform: translateX(110%);
+  }
+}
+
+@keyframes terminal-scan {
+  0% {
+    transform: translateY(-110vh);
+  }
+
+  100% {
+    transform: translateY(110vh);
   }
 }
