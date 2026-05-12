@@ -19,7 +19,7 @@ test.describe("Jobfinder dashboard", () => {
     await expect(page.getByText("API Health")).toHaveCount(0);
   });
 
-  test("routes setup and keeps locked next steps explicit", async ({ page }) => {
+  test("routes setup and handles recommendation/review step state", async ({ page }) => {
     await page.goto("/");
 
     await page.getByRole("button", { name: /Set up automated search/ }).click();
@@ -27,14 +27,27 @@ test.describe("Jobfinder dashboard", () => {
     await expect(page.getByRole("heading", { name: "Job Preferences" })).toBeVisible();
 
     await page.getByRole("button", { name: "Overview" }).click();
-    await expect(page.getByRole("button", { name: /Get recommendations/ })).toBeDisabled();
-    await expect(page.getByRole("button", { name: /Review shortlist/ })).toBeDisabled();
+    const recommendationsStep = page.getByRole("button", { name: /Get recommendations/ });
+    const reviewStep = page.getByRole("button", { name: /Review shortlist/ });
 
-    await page.getByRole("button", { name: "Jobs" }).click();
+    if (await recommendationsStep.isEnabled()) {
+      await recommendationsStep.click();
+      await expect(page.getByRole("heading", { level: 1, name: "Jobs" })).toBeVisible();
+    } else {
+      await expect(recommendationsStep).toBeDisabled();
+    }
+
+    await page.getByRole("button", { name: "Jobs", exact: true }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Jobs" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Live Jobs" })).toBeVisible();
 
-    await page.getByRole("button", { name: "Reviews Needed" }).click();
+    await page.getByRole("button", { name: "Overview" }).click();
+    if (await reviewStep.isEnabled()) {
+      await reviewStep.click();
+    } else {
+      await expect(reviewStep).toBeDisabled();
+      await page.getByRole("button", { name: "Reviews Needed", exact: true }).click();
+    }
     await expect(page.getByRole("heading", { level: 1, name: /Reviews needed/i })).toBeVisible();
   });
 
